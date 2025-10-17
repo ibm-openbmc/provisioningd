@@ -1,0 +1,11 @@
+[Unit]
+Description=attestation service
+
+[Service]
+ExecStart=/usr/bin/attestationd -c /var/spdm/spdm.conf
+Restart=always
+Type=dbus
+BusName=@DEFAULT_BUSNAME@
+
+[Install]
+WantedBy=multi-user.target
