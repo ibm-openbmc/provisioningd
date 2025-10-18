@@ -2,8 +2,11 @@
 #include "globaldefs.hpp"
 #include "logger.hpp"
 
+#include <openssl/core_names.h>
 #include <openssl/evp.h>
+#include <openssl/param_build.h>
 #include <openssl/pem.h>
+#include <openssl/rsa.h>
 #include <openssl/x509.h>
 #include <openssl/x509v3.h>
 
@@ -189,20 +192,75 @@ openssl_ptr<X509_NAME, X509_NAME_free> generateX509Name(
 
     return name;
 }
-
-// Generate a new EVP_PKEY (RSA 2048)
-inline openssl_ptr<EVP_PKEY, EVP_PKEY_free> generate_key_pair()
+openssl_ptr<EVP_PKEY, EVP_PKEY_free> generate_key_pair()
 {
-    openssl_ptr<EVP_PKEY, EVP_PKEY_free> pkey(EVP_PKEY_new(), EVP_PKEY_free);
-    openssl_ptr<RSA, RSA_free> rsa(RSA_new(), RSA_free);
-    BIGNUM* e = BN_new();
-    BN_set_word(e, RSA_F4);
-    RSA_generate_key_ex(rsa.get(), 2048, e, nullptr);
-    EVP_PKEY_assign_RSA(pkey.get(), rsa.release());
-    BN_free(e);
-    // pkey now contains both private and public key
-    return pkey;
+    // Create an EVP_PKEY_CTX for RSA key generation.
+    openssl_ptr<EVP_PKEY_CTX, EVP_PKEY_CTX_free> pkey_ctx(
+        EVP_PKEY_CTX_new_from_name(nullptr, "RSA", nullptr), EVP_PKEY_CTX_free);
+    if (!pkey_ctx)
+    {
+        // Handle error
+        return makeEVPPKeyPtr(nullptr);
+    }
+
+    if (EVP_PKEY_keygen_init(pkey_ctx.get()) <= 0)
+    {
+        // Handle error
+        return makeEVPPKeyPtr(nullptr);
+    }
+
+    // Use OSSL_PARAM_BLD to construct the parameter list.
+    openssl_ptr<OSSL_PARAM_BLD, OSSL_PARAM_BLD_free> param_bld(
+        OSSL_PARAM_BLD_new(), OSSL_PARAM_BLD_free);
+    if (!param_bld)
+    {
+        return makeEVPPKeyPtr(nullptr);
+    }
+
+    // Set the key size parameter.
+    if (OSSL_PARAM_BLD_push_int(param_bld.get(), OSSL_PKEY_PARAM_RSA_BITS,
+                                2048) <= 0)
+    {
+        return makeEVPPKeyPtr(nullptr);
+    }
+
+    // Set the public exponent parameter.
+
+    openssl_ptr<BIGNUM, BN_free> e(BN_new(), BN_free);
+    if (!e || !BN_set_word(e.get(), RSA_F4))
+    {
+        return makeEVPPKeyPtr(nullptr);
+    }
+    if (OSSL_PARAM_BLD_push_BN(param_bld.get(), OSSL_PKEY_PARAM_RSA_E,
+                               e.get()) <= 0)
+    {
+        return makeEVPPKeyPtr(nullptr);
+    }
+
+    // Build the OSSL_PARAM array from the builder.
+    openssl_ptr<OSSL_PARAM, OSSL_PARAM_free> params(
+        OSSL_PARAM_BLD_to_param(param_bld.get()), OSSL_PARAM_free);
+    if (!params)
+    {
+        return makeEVPPKeyPtr(nullptr);
+    }
+
+    // Set all parameters on the keygen context at once.
+    if (EVP_PKEY_CTX_set_params(pkey_ctx.get(), params.get()) <= 0)
+    {
+        return makeEVPPKeyPtr(nullptr);
+    }
+
+    // Generate the key pair directly into an EVP_PKEY object.
+    EVP_PKEY* raw_pkey = nullptr;
+    if (EVP_PKEY_keygen(pkey_ctx.get(), &raw_pkey) <= 0)
+    {
+        return makeEVPPKeyPtr(nullptr);
+    }
+
+    return makeEVPPKeyPtr(raw_pkey);
 }
+
 bool isSignedByCA(const openssl_ptr<X509, X509_free>& cert,
                   const openssl_ptr<EVP_PKEY, EVP_PKEY_free>& ca_pubkey)
 {
@@ -603,4 +661,4 @@ std::string getPublicKeyStringFromCert(X509Ptr signcert)
     BIO_get_mem_ptr(bio.get(), &buf);
     return std::string(buf->data, buf->length);
 }
-}
+} // namespace NSNAME
