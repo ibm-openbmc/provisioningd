@@ -1,6 +1,7 @@
 #pragma once
 #include "sdbus_calls.hpp"
-#include "xyz/openbmc_project/Provisioning/Provisioning/server.hpp"
+
+#include <xyz/openbmc_project/Provisioning/Provisioning/server.hpp>
 using namespace reactor;
 
 using namespace sdbusplus::server::xyz::openbmc_project::provisioning;
@@ -11,12 +12,12 @@ struct ProvisioningController : Ifaces
 {
     net::io_context& ioContext;
     std::shared_ptr<sdbusplus::asio::connection> conn;
-    bool trustedConnectionState{false};
+    PeerConnectionStatus trustedConnectionState{
+        PeerConnectionStatus::NotDetermined};
     bool provState{false};
     using PROVISIONING_HANDLER = std::function<void()>;
     PROVISIONING_HANDLER provisionHandler;
-    using CHECK_PEER_HANDLER = std::function<void()>;
-    CHECK_PEER_HANDLER checkPeerHandler;
+
     static constexpr auto busName = "xyz.openbmc_project.Provisioning";
     static constexpr auto objPath = "/xyz/openbmc_project/Provisioning";
     static constexpr auto interface = Provisioning::interface;
@@ -34,26 +35,18 @@ struct ProvisioningController : Ifaces
         ioContext(ctx), conn(conn)
 
     {}
-    void provisionPeer() override
+    void provisionPeer(std::string bmcId) override
     {
         provisionHandler();
     }
-    void initiatePeerConnectionTest() override
-    {
-        checkPeerHandler();
-    }
-
     void setProvisionHandler(PROVISIONING_HANDLER handler)
     {
         provisionHandler = std::move(handler);
     }
-    void setCheckPeerHandler(CHECK_PEER_HANDLER handler)
+    PeerConnectionStatus peerConnected() const override
     {
-        checkPeerHandler = std::move(handler);
-    }
-    bool peerConnected() const override
-    {
-        LOG_DEBUG("PeerConnected state {}", trustedConnectionState);
+        LOG_DEBUG("PeerConnected state {}",
+                  static_cast<int>(trustedConnectionState));
         return trustedConnectionState;
     }
     bool provisioned() const override
@@ -61,14 +54,16 @@ struct ProvisioningController : Ifaces
         LOG_DEBUG("Provisioned state {}", provState);
         return provState;
     }
-    void setPeerConnected(bool value)
+    void setPeerConnected(PeerConnectionStatus value)
     {
-        LOG_DEBUG("Setting PeerConnected state {}", value);
+        LOG_DEBUG("Setting PeerConnected state {}", static_cast<int>(value));
         trustedConnectionState = value;
+        Ifaces::peerConnected(value, false);
     }
     void setProvisioned(bool value)
     {
         LOG_DEBUG("Setting Provisioned state {}", value);
         provState = value;
+        Ifaces::provisioned(value, false);
     }
 };
