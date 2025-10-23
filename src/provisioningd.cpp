@@ -22,6 +22,21 @@ static constexpr auto SPDM_RES_INTF = "xyz.openbmc_project.SpdmResponder";
 static constexpr auto SPDM_PROP = "Status";
 static constexpr auto SPDM_REQ_SIGNAL = "Attested";
 static constexpr auto SPDM_RES_SIGNAL = "Attested";
+static constexpr auto LLDP_SVC = "xyz.openbmc_project.LLDP";
+static constexpr auto LLDP_PATH = "/xyz/openbmc_project/network/lldp/{}";
+static constexpr auto LLDP_INTF = "xyz.openbmc_project.Network.LLDP.TLVs";
+static constexpr auto LLDP_PROP = "ManagementAddressIPv4";
+static constexpr auto LLDP_REC_PATH =
+    "/xyz/openbmc_project/network/lldp/{}/receive";
+
+using DbusObjectPath = std::string;
+using DbusInterface = std::string;
+using PropertyValue = std::string;
+using DbusService = std::string;
+using InterfaceMap =
+    std::map<std::string,
+             std::map<std::string, std::variant<bool, int32_t, std::string>>>;
+
 net::awaitable<void> waitFor(net::io_context& io_context,
                              std::chrono::seconds duration)
 {
@@ -51,6 +66,7 @@ net::awaitable<bool> monitorBmc(net::io_context& io_context, TcpClient& client)
             LOG_ERROR("Receive error: {}", ec.message());
             co_return false;
         }
+        LOG_INFO("Received from BMC: {}", std::string(data.data(), bytes));
         std::string ping("ping");
         auto [ecw, bytesw] = co_await client.write(net::buffer(ping));
         if (ecw)
@@ -58,7 +74,7 @@ net::awaitable<bool> monitorBmc(net::io_context& io_context, TcpClient& client)
             LOG_ERROR("Send error: {}", ecw.message());
             co_return false;
         }
-        co_await waitFor(io_context, 1s);
+        co_await waitFor(io_context, 30s);
     }
     co_return false;
 }
@@ -100,24 +116,30 @@ net::awaitable<void> tryConnect(net::io_context& io_context,
                                 const std::string& ip, short port,
                                 ProvisioningController& controller)
 {
+    controller.setPeerConnected(
+        ProvisioningIface::PeerConnectionStatus::InProgress);
     LOG_DEBUG("Trying peer connection");
     auto sslCtx = getClientContext();
     if (!sslCtx)
     {
         LOG_ERROR("ssl context is not available");
-        controller.setPeerConnected(false);
+        controller.setPeerConnected(
+            ProvisioningIface::PeerConnectionStatus::NotConnected);
         co_return;
     }
     TcpClient client(io_context.get_executor(), *sslCtx);
     auto ec = co_await connect(client, ip, port);
     if (ec)
     {
-        controller.setPeerConnected(false);
+        controller.setPeerConnected(
+            ProvisioningIface::PeerConnectionStatus::NotConnected);
         co_return;
     }
-    controller.setPeerConnected(true);
-    bool bmcNotResponding = co_await monitorBmc(io_context, client);
-    controller.setPeerConnected(bmcNotResponding);
+    controller.setPeerConnected(
+        ProvisioningIface::PeerConnectionStatus::Connected);
+    co_await monitorBmc(io_context, client);
+    controller.setPeerConnected(
+        ProvisioningIface::PeerConnectionStatus::NotConnected);
 }
 
 std::shared_ptr<BmcResponder> makeBmcResponder(
@@ -128,9 +150,46 @@ std::shared_ptr<BmcResponder> makeBmcResponder(
         std::make_shared<BmcResponder>(ctx, std::move(sslCtx), port);
 
     bmcResponder->onConnectionChange([&controller](bool connected) {
-        controller.setPeerConnected(connected);
+        controller.setPeerConnected(
+            connected ? ProvisioningIface::PeerConnectionStatus::Connected
+                      : ProvisioningIface::PeerConnectionStatus::NotConnected);
     });
     return bmcResponder;
+}
+net::awaitable<void> updateNeighbourDetails(
+    net::io_context& io_context,
+    std::shared_ptr<sdbusplus::asio::connection> conn,
+    ProvisioningController& controller, short rport)
+{
+    auto [ec, propVal] = co_await getProperty<std::string>(
+        *conn, LLDP_SVC, std::format(LLDP_REC_PATH, "eth1"), LLDP_INTF,
+        LLDP_PROP);
+    if (ec)
+    {
+        LOG_ERROR("Failed to get LLDP property: {}", ec.message());
+        co_return;
+    }
+    LOG_INFO("LLDP ManagementAddressIPv4: {}", propVal);
+    co_await tryConnect(io_context, propVal, rport, controller);
+    co_return;
+}
+net::awaitable<void> onNeighbhorFound(
+    net::io_context& io_context, ProvisioningController& controller,
+    short rport, const boost::system::error_code& ec, std::string ip)
+{
+    if (ec)
+    {
+        co_return;
+    }
+    LOG_INFO("LLDP Neighbour IP found: {}", ip);
+    if (controller.peerConnected() ==
+        ProvisioningIface::PeerConnectionStatus::Connected)
+    {
+        LOG_INFO("Peer already connected, skipping connection attempt");
+        co_return;
+    }
+    co_await tryConnect(io_context, ip, rport, controller);
+    co_return;
 }
 net::awaitable<void> onSpdmStateChange(
     net::io_context& io_context, const std::string& ip, short sport,
@@ -232,13 +291,6 @@ int main(int argc, const char* argv[])
                                           std::ref(bmcResponder), sport),
                           net::detached);
         });
-        controller.setCheckPeerHandler([&]() {
-            LOG_INFO("Checking peer BMC connection");
-            net::co_spawn(io_context,
-                          std::bind_front(tryConnect, std::ref(io_context), ip,
-                                          rport, std::ref(controller)),
-                          net::detached);
-        });
 
         DbusSignalWatcher<bool>::watch(
             io_context, conn,
@@ -246,6 +298,17 @@ int main(int argc, const char* argv[])
                             std::ref(controller), std::ref(bmcResponder),
                             rport),
             SPDM_RES_INTF, SPDM_RES_SIGNAL);
+        DbusPropertyWatcher<std::string>::watch(
+            io_context, conn,
+            std::bind_front(onNeighbhorFound, std::ref(io_context),
+                            std::ref(controller), rport),
+            std::format(LLDP_REC_PATH, "eth1"), LLDP_INTF, LLDP_PROP);
+
+        net::co_spawn(
+            io_context,
+            std::bind_front(updateNeighbourDetails, std::ref(io_context), conn,
+                            std::ref(controller), rport),
+            net::detached);
         io_context.run();
     }
     catch (const std::exception& e)
