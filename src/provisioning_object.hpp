@@ -46,7 +46,7 @@ struct ProvisioningController : Ifaces
     PeerConnectionStatus peerConnected() const override
     {
         LOG_DEBUG("PeerConnected state {}",
-                  static_cast<int>(trustedConnectionState));
+                  convertPeerConnectionStatusToString(trustedConnectionState));
         return trustedConnectionState;
     }
     bool provisioned() const override
@@ -56,7 +56,8 @@ struct ProvisioningController : Ifaces
     }
     void setPeerConnected(PeerConnectionStatus value)
     {
-        LOG_DEBUG("Setting PeerConnected state {}", static_cast<int>(value));
+        LOG_DEBUG("Setting PeerConnected state {}",
+                  convertPeerConnectionStatusToString(value));
         trustedConnectionState = value;
         Ifaces::peerConnected(value, false);
     }

@@ -2,6 +2,7 @@
 
 #include "certificate_exchange.hpp"
 #include "command_line_parser.hpp"
+#include "dbusproperty_watcher.hpp"
 #include "eventmethods.hpp"
 #include "eventqueue.hpp"
 #include "logger.hpp"
@@ -17,50 +18,13 @@
 #include <nlohmann/json.hpp>
 
 #include <csignal>
-constexpr auto IP_EVENT = "IPEvent";
+static constexpr auto LLDP_SVC = "xyz.openbmc_project.LLDP";
+static constexpr auto LLDP_PATH = "/xyz/openbmc_project/network/lldp/{}";
+static constexpr auto LLDP_INTF = "xyz.openbmc_project.Network.LLDP.TLVs";
+static constexpr auto LLDP_PROP = "ManagementAddressIPv4";
+static constexpr auto LLDP_REC_PATH =
+    "/xyz/openbmc_project/network/lldp/{}/receive";
 std::string prefix;
-void signalHandler(int signal)
-{
-    if (signal == SIGTERM || signal == SIGINT)
-    {
-        LOG_INFO("Termination signal received, storing event queue...");
-        // if (peventQueue)
-        // {
-        //     peventQueue->store();
-        // }
-        exit(0);
-    }
-}
-
-void setupSignalHandlers()
-{
-    std::signal(SIGTERM, signalHandler);
-    std::signal(SIGINT, signalHandler);
-}
-net::awaitable<boost::system::error_code> publisher(
-    EventQueue& eventQue, Streamer streamer, const std::string& event)
-{
-    LOG_DEBUG("Received Event for publish: {}", event);
-    auto [id, data] = parseEvent(event);
-    eventQue.addEvent(makeEvent(data));
-    co_return boost::system::error_code{};
-}
-net::awaitable<boost::system::error_code> sendEvent(
-    std::shared_ptr<sdbusplus::asio::connection> conn, const std::string& id,
-    Streamer streamer, const std::string& event)
-{
-    auto [ec, msg] = co_await awaitable_dbus_method_call<sdbusplus::message_t>(
-        *conn, SpdmDeviceIface::busName,
-        std::format(SpdmDeviceIface::objPath, id), SpdmDeviceIface::interface,
-        "attest");
-    if (ec)
-    {
-        LOG_ERROR("Failed to send event: {}", ec.message());
-        co_return ec;
-    }
-
-    co_return boost::system::error_code{};
-}
 ssl::context loadServerContext(const std::string& servercert,
                                const std::string& privKey,
                                const std::string& trustStore)
@@ -129,6 +93,47 @@ void intialiseSpdmHandler(SpdmHandler& spdmHandler,
             co_return;
         });
 }
+
+net::awaitable<void> onNeighbhorFound(
+    net::io_context& io_context,
+    std::shared_ptr<sdbusplus::asio::connection> conn,
+    sdbusplus::asio::object_server& dbusServer, SpdmHandler& spdmHandler,
+    SpdmResponderIface& spdmResponder,
+    std::shared_ptr<SpdmDeviceIface>& spdmDevice, const std::string& remotePort,
+    const boost::system::error_code& ec, const std::string& propVal)
+{
+    LOG_INFO("Neighbour LLDP ManagementAddressIPv4 changed: {}", propVal);
+    SpdmDeviceIface::ResponderInfo responderInfo{"device1", propVal,
+                                                 remotePort};
+    spdmDevice.reset();
+    spdmDevice = std::make_shared<SpdmDeviceIface>(conn, dbusServer,
+                                                   responderInfo, spdmHandler);
+    intialiseSpdmHandler(spdmHandler, *spdmDevice, spdmResponder);
+    co_return;
+}
+net::awaitable<void> updateNeighbourDetails(
+    net::io_context& io_context,
+    std::shared_ptr<sdbusplus::asio::connection> conn,
+    sdbusplus::asio::object_server& dbusServer, SpdmHandler& spdmHandler,
+    SpdmResponderIface& spdmResponder,
+    std::shared_ptr<SpdmDeviceIface>& spdmDevice, const std::string& remotePort)
+
+{
+    auto [ec, propVal] = co_await getProperty<std::string>(
+        *conn, LLDP_SVC, std::format(LLDP_REC_PATH, "eth1"), LLDP_INTF,
+        LLDP_PROP);
+    if (ec)
+    {
+        LOG_ERROR("Failed to get LLDP property: {}", ec.message());
+        co_return;
+    }
+    LOG_INFO("LLDP ManagementAddressIPv4: {}", propVal);
+    SpdmDeviceIface::ResponderInfo responderInfo{"device1", propVal,
+                                                 remotePort};
+    spdmDevice = std::make_shared<SpdmDeviceIface>(conn, dbusServer,
+                                                   responderInfo, spdmHandler);
+    intialiseSpdmHandler(spdmHandler, *spdmDevice, spdmResponder);
+}
 int main(int argc, const char* argv[])
 {
     auto [conf] = getArgs(parseCommandline(argc, argv), "--conf,-c");
@@ -180,10 +185,6 @@ int main(int argc, const char* argv[])
                               ssl_client_context, maxConnections);
         auto conn = std::make_shared<sdbusplus::asio::connection>(io_context);
 
-        eventQueue.addEventConsumer(
-            "Publish", std::bind_front(publisher, std::ref(eventQueue)));
-        // eventQueue.load();
-        setupSignalHandlers();
         auto verifyCert = loadCertificate(signcert);
         if (!verifyCert)
         {
@@ -200,15 +201,21 @@ int main(int argc, const char* argv[])
             spdmHandler.addToMeasure(resource);
         }
         sdbusplus::asio::object_server dbusServer(conn);
-        SpdmDeviceIface::ResponderInfo responderInfo{"device1", rip.data(),
-                                                     rp.data()};
-        eventQueue.addEventConsumer(
-            "ATTEST", std::bind_front(sendEvent, conn, responderInfo.id));
-        SpdmDeviceIface spdmDevice(conn, dbusServer, responderInfo,
-                                   spdmHandler);
+        std::shared_ptr<SpdmDeviceIface> spdmDevice;
         SpdmResponderIface spdmResponder(conn, dbusServer, "responder1");
-        intialiseSpdmHandler(spdmHandler, spdmDevice, spdmResponder);
+        DbusPropertyWatcher<std::string>::watch(
+            io_context, conn,
+            std::bind_front(onNeighbhorFound, std::ref(io_context), conn,
+                            std::ref(dbusServer), std::ref(spdmHandler),
+                            std::ref(spdmResponder), std::ref(spdmDevice), rp),
+            std::format(LLDP_REC_PATH, "eth1"), LLDP_INTF, LLDP_PROP);
 
+        net::co_spawn(
+            io_context,
+            std::bind_front(updateNeighbourDetails, std::ref(io_context), conn,
+                            std::ref(dbusServer), std::ref(spdmHandler),
+                            std::ref(spdmResponder), std::ref(spdmDevice), rp),
+            net::detached);
         conn->request_name(SpdmDeviceIface::busName);
         io_context.run();
     }

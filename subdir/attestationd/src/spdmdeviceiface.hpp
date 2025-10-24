@@ -39,6 +39,10 @@ struct SpdmDeviceIface
         iface->register_signal<bool>(signalName); // signal name
         iface->initialize();
     }
+    ~SpdmDeviceIface()
+    {
+        dbusServer.remove_interface(iface);
+    }
     void setAttestationStartHandler(AFTERATTESTATION_HANDLER handler)
     {
         onAttestationStart = std::move(handler);
