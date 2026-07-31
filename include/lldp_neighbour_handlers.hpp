@@ -61,7 +61,7 @@ auto makeNeighbourDiscoveryHandler(Handler handler,
                 propMap, "ManagementAddressIPv4", "SystemName");
         if (ec1)
         {
-            LOG_ERROR("Failed to get LLDP properties: {}", ec.message());
+            LOG_ERROR("Failed to get LLDP properties: {}", ec1.message());
             co_return;
         }
         if (address.empty() || name.empty())
