@@ -913,10 +913,20 @@ bool checkValidity(const openssl_ptr<X509, X509_free>& cert)
     }
 
     ASN1_INTEGER* serial = X509_get_serialNumber(cert.get());
-    if (!serial || ASN1_INTEGER_get(serial) <= 0)
+    if (!serial)
     {
-        LOG_ERROR("Certificate serial number is invalid or missing");
+        LOG_ERROR("Certificate serial number is missing");
         return false;
+    }
+    {
+        BIGNUM* bn = ASN1_INTEGER_to_BN(serial, nullptr);
+        if (!bn || BN_is_zero(bn) || BN_is_negative(bn))
+        {
+            BN_free(bn);
+            LOG_ERROR("Certificate serial number is invalid (zero or negative)");
+            return false;
+        }
+        BN_free(bn);
     }
 
     const X509_ALGOR* sig_alg = X509_get0_tbs_sigalg(cert.get());
