@@ -35,7 +35,7 @@ bmc_pairing_manager_dep = declare_dependency(
     dependencies:[sdbusplus_dep,sdeventplus_dep,openssl_dep,boost_dep,dbus_interfaces_dep],
     include_directories:['include']
 )
-bmc_pairing_manager_default_busname = 'xyz.openbmc_project.BmcPairingManager'
+bmc_pairing_manager_default_busname = 'xyz.openbmc_project.Provisioning'
 configure_file(
     input: 'service/xyz.openbmc_project.bmc-pairing-manager.service.in',
     output: 'xyz.openbmc_project.bmc-pairing-manager.service',
