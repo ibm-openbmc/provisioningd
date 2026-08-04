@@ -39,7 +39,7 @@ struct BmcPairingManagerObject : Ifaces
     using PROVISIONING_HANDLER = std::function<void(const std::string&)>;
     PROVISIONING_HANDLER provisionHandler;
 
-    static constexpr auto busName = "xyz.openbmc_project.BmcPairingManager";
+    static constexpr auto busName = "xyz.openbmc_project.Provisioning";
     static constexpr auto objPath = Provisioning::instance_path;
     static constexpr auto interface = Provisioning::interface;
 
