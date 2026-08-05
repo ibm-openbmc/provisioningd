@@ -26,6 +26,31 @@ inline std::string SERVER_PKEY_PATH()
 {
     return "/etc/ssl/private/server_pkey.pem";
 }
+inline bool sslVerifyCallback(bool preverified, boost::asio::ssl::verify_context& ctx)
+{
+    X509_STORE_CTX* store_ctx = ctx.native_handle();
+    int err = X509_STORE_CTX_get_error(store_ctx);
+    int depth = X509_STORE_CTX_get_error_depth(store_ctx);
+
+    X509* cert = X509_STORE_CTX_get_current_cert(store_ctx);
+    char subject[256] = {};
+    if (cert != nullptr)
+    {
+        X509_NAME_oneline(X509_get_subject_name(cert), subject, sizeof(subject));
+    }
+
+    if (!preverified)
+    {
+        LOG_ERROR("SSL certificate verification failed: depth={}, error={} ({}), subject={}",
+                  depth, err, X509_verify_cert_error_string(err), subject);
+    }
+    else
+    {
+        LOG_DEBUG("SSL certificate verification ok: depth={}, subject={}", depth, subject);
+    }
+    return preverified;
+}
+
 std::optional<ssl::context> getClientContext()
 {
     if (fs::exists(ENTITY_CLIENT_CERT_PATH()) &&
@@ -50,6 +75,7 @@ std::optional<ssl::context> getClientContext()
 
         ssl_context.add_verify_path(trustStorePath());
         ssl_context.set_verify_mode(boost::asio::ssl::verify_peer);
+        ssl_context.set_verify_callback(sslVerifyCallback);
         ssl_context.use_certificate_chain_file(ENTITY_CLIENT_CERT_PATH());
         ssl_context.use_private_key_file(CLIENT_PKEY_PATH(),
                                          boost::asio::ssl::context::pem);
@@ -91,6 +117,7 @@ std::optional<ssl::context> getServerContext()
         ssl_context.set_verify_mode(
             boost::asio::ssl::verify_peer |
             boost::asio::ssl::verify_fail_if_no_peer_cert);
+        ssl_context.set_verify_callback(sslVerifyCallback);
         return std::optional(std::move(ssl_context));
     }
     return std::nullopt;
