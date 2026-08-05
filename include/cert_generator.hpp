@@ -26,6 +26,10 @@
 #include <vector>
 namespace NSNAME
 {
+// Maximum certificate validity in days (~100 years). This is the upper bound
+// enforced by create_certificate() and used at all call sites.
+inline constexpr int CERT_MAX_VALIDITY_DAYS = 36500;
+
 // Forward declarations for PEM<->DER private-key string/buffer helpers
 bool pemKeyStringToDer(const std::string& pem, std::vector<uint8_t>& der);
 bool derKeyToPemString(const std::vector<uint8_t>& der, std::string& pem);
@@ -712,10 +716,10 @@ inline openssl_ptr<X509, X509_free> create_certificate(
         LOG_ERROR("Invalid parameters for certificate creation");
         return makeX509Ptr(nullptr);
     }
-    if (days_valid < 1 || days_valid > 36500)
+    if (days_valid < 1 || days_valid > CERT_MAX_VALIDITY_DAYS)
     {
-        LOG_ERROR("Invalid days_valid: {}. Must be between 1 and 36500 days",
-                  days_valid);
+        LOG_ERROR("Invalid days_valid: {}. Must be between 1 and {} days",
+                  days_valid, CERT_MAX_VALIDITY_DAYS);
         return makeX509Ptr(nullptr);
     }
     openssl_ptr<X509, X509_free> cert(X509_new(), X509_free);
@@ -725,14 +729,12 @@ inline openssl_ptr<X509, X509_free> create_certificate(
         1, std::numeric_limits<uint64_t>::max());
     ASN1_INTEGER_set_uint64(X509_get_serialNumber(cert.get()), dis(gen));
     
-    // Set notBefore to Unix epoch (January 1, 1970, 00:00:00 UTC) for maximum validity
-    // This allows the certificate to be valid from the earliest possible date
-    ASN1_TIME* notBefore = X509_get_notBefore(cert.get());
-    ASN1_TIME_set(notBefore, 0); // Unix epoch time (0 seconds since Jan 1, 1970)
-    
-    // Set notAfter to current time + days_valid for maximum forward validity
+    // Set notBefore to Unix epoch so the cert is valid regardless of clock skew
+    ASN1_TIME_set(X509_get_notBefore(cert.get()), 0);
+
+    // Set notAfter to current time + days_valid
     X509_gmtime_adj(X509_get_notAfter(cert.get()),
-                    60L * 60L * 24L * days_valid);
+                    60L * 60L * 24L * (long)days_valid);
     X509_set_pubkey(cert.get(), subject_key);
     X509_set_subject_name(cert.get(), subject_name);
     X509_set_issuer_name(cert.get(), issuer_name);
@@ -775,12 +777,12 @@ inline openssl_ptr<X509, X509_free> create_certificate(
 // Create an intermediate CA certificate signed by root CA
 inline std::pair<X509Ptr, EVP_PKEYPtr> create_ca_cert(
     EVP_PKEY* signkey, X509_NAME* signname, const std::string& common_name,
-    int days_valid = 365)
+    int days_valid = CERT_MAX_VALIDITY_DAYS)
 {
-    if (days_valid < 1 || days_valid > 36500)
+    if (days_valid < 1 || days_valid > CERT_MAX_VALIDITY_DAYS)
     {
-        LOG_ERROR("Invalid days_valid: {}. Must be between 1 and 36500 days",
-                  days_valid);
+        LOG_ERROR("Invalid days_valid: {}. Must be between 1 and {} days",
+                  days_valid, CERT_MAX_VALIDITY_DAYS);
         return std::make_pair(X509Ptr(nullptr, X509_free),
                               EVP_PKEYPtr(nullptr, EVP_PKEY_free));
     }
@@ -812,12 +814,12 @@ inline std::pair<X509Ptr, EVP_PKEYPtr> create_ca_cert(
 // Create an entity certificate signed by CA (root or intermediate)
 inline std::pair<X509Ptr, EVP_PKEYPtr> create_leaf_cert(
     EVP_PKEY* ca_pkey, X509_NAME* ca_name, const std::string& common_name,
-    int days_valid = 365)
+    int days_valid = CERT_MAX_VALIDITY_DAYS)
 {
-    if (days_valid < 1 || days_valid > 36500)
+    if (days_valid < 1 || days_valid > CERT_MAX_VALIDITY_DAYS)
     {
-        LOG_ERROR("Invalid days_valid: {}. Must be between 1 and 36500 days",
-                  days_valid);
+        LOG_ERROR("Invalid days_valid: {}. Must be between 1 and {} days",
+                  days_valid, CERT_MAX_VALIDITY_DAYS);
         return std::make_pair(X509Ptr(nullptr, X509_free),
                               EVP_PKEYPtr(nullptr, EVP_PKEY_free));
     }
