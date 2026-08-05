@@ -143,12 +143,14 @@ template <int COUNT>
 std::optional<std::pair<X509Ptr, EVP_PKEYPtr>> createAndSaveEntityCertificate(
     const EVP_PKEYPtr& ca_pkey, const X509Ptr& ca,
     const std::string& common_name,
-    const std::array<ENTITY_DATA, COUNT>& entity_data, int index)
+    const std::array<ENTITY_DATA, COUNT>& entity_data, int index,
+    int days_valid = CERT_MAX_VALIDITY_DAYS)
 {
     auto ca_name = openssl_ptr<X509_NAME, X509_NAME_free>(
         X509_NAME_dup(X509_get_subject_name(ca.get())), X509_NAME_free);
     auto [cert,
-          key] = create_leaf_cert(ca_pkey.get(), ca_name.get(), common_name);
+          key] = create_leaf_cert(ca_pkey.get(), ca_name.get(), common_name,
+                                  days_valid);
     if (!cert || !key)
     {
         LOG_ERROR("Failed to create entity certificate");
