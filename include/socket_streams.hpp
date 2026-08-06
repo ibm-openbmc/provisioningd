@@ -17,7 +17,7 @@ namespace NSNAME
 {
 // Configure TCP keepalive to detect dead connections quickly.
 // Enables keepalive and, on Linux, sets aggressive probe parameters:
-//   idle time = 10s, probe interval = 5s, probe count = 3 (~25s total).
+//   idle time = 3s, probe interval = 2s, probe count = 2 (~7s total).
 template <typename Socket>
 inline void configureSocketKeepalive(Socket& socket)
 {
@@ -33,24 +33,24 @@ inline void configureSocketKeepalive(Socket& socket)
 #ifdef __linux__
     int native_fd = socket.native_handle();
 
-    // Start sending keepalive probes after 10 seconds of idle time
-    int keepalive_time = 10;
+    // Start sending keepalive probes after 3 seconds of idle time
+    int keepalive_time = 3;
     if (setsockopt(native_fd, IPPROTO_TCP, TCP_KEEPIDLE, &keepalive_time,
                    sizeof(keepalive_time)) < 0)
     {
         LOG_ERROR("Failed to set TCP_KEEPIDLE");
     }
 
-    // Send keepalive probes every 5 seconds
-    int keepalive_interval = 5;
+    // Send keepalive probes every 2 seconds
+    int keepalive_interval = 2;
     if (setsockopt(native_fd, IPPROTO_TCP, TCP_KEEPINTVL, &keepalive_interval,
                    sizeof(keepalive_interval)) < 0)
     {
         LOG_ERROR("Failed to set TCP_KEEPINTVL");
     }
 
-    // Close connection after 3 failed probes (~25 seconds total)
-    int keepalive_count = 3;
+    // Close connection after 2 failed probes (~7 seconds total)
+    int keepalive_count = 2;
     if (setsockopt(native_fd, IPPROTO_TCP, TCP_KEEPCNT, &keepalive_count,
                    sizeof(keepalive_count)) < 0)
     {
