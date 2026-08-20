@@ -2,8 +2,8 @@
 // and writes/overwrites a "bmc.peer <ip>" entry in /etc/hosts so that
 // systemd-resolved resolves the peer by name without a DNS lookup.
 
+#include "../include/hosts_updater.hpp"
 #include "command_line_parser.hpp"
-#include "hosts_updater.hpp"
 #include "lldp_neighbour_handlers.hpp"
 #include "logger.hpp"
 #include "sdbus_calls.hpp"

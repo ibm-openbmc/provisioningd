@@ -4,11 +4,7 @@ gtest_dep = dependency('gtest', main: true, required: true)
 gmock_dep = dependency('gmock', required: true)
 
 # Common test dependencies
-test_deps = [
-    provisioning_dep,
-    gtest_dep,
-    gmock_dep,
-]
+test_deps = [bmc_pairing_manager_dep, gtest_dep, gmock_dep]
 
 # Test for make_awaitable.hpp
 test_make_awaitable = executable(

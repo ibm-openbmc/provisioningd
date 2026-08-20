@@ -57,7 +57,7 @@ void combineContexts(ssl::context& defaultCtx,
 
     SSL_CTX_set_client_hello_cb(
         raw_default,
-        [](SSL* s, int* al, void* arg) {
+        [](SSL* s, int* /*al*/, void* arg) {
             std::map<std::string, SSL_CTX*>& virtualHosts =
                 *(static_cast<std::map<std::string, SSL_CTX*>*>(arg));
             const char* servername =
@@ -185,7 +185,7 @@ int main(int argc, const char* argv[])
     }
     try
     {
-        auto json = loadConfig(conf.value().data());
+        auto json = loadConfig(std::string(conf.value()));
 
         auto servercert = json.value(
             "server-cert", std::string{"/etc/ssl/certs/https/server.mtls.pem"});

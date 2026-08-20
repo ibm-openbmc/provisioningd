@@ -1,20 +1,28 @@
 # BMC Pairing Manager
+
 ## Overview
 
-The BMC Pairing Manager Daemon (`bmc-pairing-manager`) is a secure BMC (Baseboard Management Controller) pairing service that facilitates mutual authentication and secure communication between BMC peers using SPDM (Security Protocol and Data Model) attestation and SSL/TLS encrypted connections.
+The BMC Pairing Manager Daemon (`bmc-pairing-manager`) is a secure BMC
+(Baseboard Management Controller) pairing service that facilitates mutual
+authentication and secure communication between BMC peers using SPDM (Security
+Protocol and Data Model) attestation and SSL/TLS encrypted connections.
 
 ## Architecture Components
 
 ### Core Components
 
 1. **BmcPairingManagerObject**
-   - D-Bus object implementing the Provisioning interface for BMC pairing management
+   - D-Bus object implementing the Provisioning interface for BMC pairing
+     management
    - Manages provisioning state through PicController integration
    - Tracks bidirectional peer connection status (incoming/outgoing)
    - Provides provisionPeer() method to initiate peer provisioning via D-Bus
-   - Exposes provisioned and peerConnected properties for monitoring pairing state
-   - Maintains connection state for both incoming (server) and outgoing (client) connections
-   - Determines highest connection state across both directions for unified status reporting
+   - Exposes provisioned and peerConnected properties for monitoring pairing
+     state
+   - Maintains connection state for both incoming (server) and outgoing (client)
+     connections
+   - Determines highest connection state across both directions for unified
+     status reporting
 
 2. **BmcResponder**
    - SSL/TLS server accepting incoming connections from peer BMCs
@@ -42,8 +50,10 @@ The BMC Pairing Manager Daemon (`bmc-pairing-manager`) is a secure BMC (Baseboar
    - Integration with OpenSSL for cryptographic operations
 
 6. **D-Bus Integration**
-   - **DbusPropertyWatcher**: Monitors D-Bus property changes (e.g., LLDP neighbor discovery)
-   - **DbusSignalWatcher**: Listens for D-Bus signals (e.g., SPDM attestation completion)
+   - **DbusPropertyWatcher**: Monitors D-Bus property changes (e.g., LLDP
+     neighbor discovery)
+   - **DbusSignalWatcher**: Listens for D-Bus signals (e.g., SPDM attestation
+     completion)
    - Asynchronous D-Bus operations using Boost.Asio coroutines
 
 7. **LLDP Integration**
@@ -69,39 +79,39 @@ graph TB
         DPW[DbusPropertyWatcher]
         DSW[DbusSignalWatcher]
     end
-    
+
     subgraph "External Services"
         LLDP[LLDP Service]
         SPDM[SPDM Attestation Service]
         DBUS[D-Bus System Bus]
     end
-    
+
     subgraph "Security Layer"
         TPM[TPM2 Provider]
         SSL[SSL/TLS Context]
     end
-    
+
     subgraph "Peer BMC"
         PEER[Peer BMC Pairing Manager Service]
     end
-    
+
     PC --> BR
     PC --> TC
     PC --> CM
     PC --> DPW
     PC --> DSW
-    
+
     DPW --> LLDP
     DSW --> SPDM
     PC --> DBUS
-    
+
     CM --> TPM
     BR --> SSL
     TC --> SSL
-    
+
     TC -.->|Secure Connection| PEER
     BR -.->|Accept Connection| PEER
-    
+
     LLDP --> DBUS
     SPDM --> DBUS
 ```
@@ -118,7 +128,7 @@ sequenceDiagram
     participant TC as TcpClient
     participant BR as BmcResponder
     participant Peer as Peer BMC
-    
+
     Main->>PC: Initialize
     Main->>BR: Start Server (port 8090)
 
@@ -137,16 +147,16 @@ sequenceDiagram
         TC->>PC: Update "Connected"
         loop Keep-alive
             TC->>Peer: "ping"
-            Peer-->>TC: "alive"    
+            Peer-->>TC: "alive"
         end
         TC->>PC: Update "Not Connected"
     end
-   
-   
-    
+
+
+
     alt Connection Check
         Main->>LLDP: Watch for neighbors
-    
+
         LLDP-->>Main: Neighbor IP discovered
         Main->>Main: Check SSL Context
         alt Cotext Ready
@@ -158,13 +168,13 @@ sequenceDiagram
             TC->>PC: Update "Connected"
             loop Keep-alive
                 TC->>Peer: "ping"
-                Peer-->>TC: "alive"    
+                Peer-->>TC: "alive"
             end
         end
         TC->>PC: Update "Not Connected"
     end
-    
-   
+
+
 ```
 
 ## Pairing Flow
@@ -191,25 +201,25 @@ graph LR
         SC[Server Certificate]
         CC[Client Certificate]
     end
-    
+
     subgraph "TPM2 Storage"
         TPM[TPM2 Provider]
         PK[Private Keys]
         CERT[Certificates]
     end
-    
+
     subgraph "SSL Context"
         SCTX[Server Context]
         CCTX[Client Context]
     end
-    
-   
+
+
     IC --> SC
     IC --> CC
-    
+
     TPM --> PK
     TPM --> CERT
-    
+
     PK --> SCTX
     PK --> CCTX
     CERT --> SCTX
@@ -221,30 +231,35 @@ graph LR
 ## Key Features
 
 ### 1. Mutual TLS Authentication
+
 - Both client and server verify peer certificates
 - Certificate chain validation against trusted CA
 - Support for TPM2-backed private keys
 - Modern cipher suites (TLS 1.2+)
 
 ### 2. SPDM Integration
+
 - Device attestation before establishing trust
 - Integration with external SPDM attestation service
 - Asynchronous attestation with timeout handling
 - Signal-based notification of attestation completion
 
 ### 3. Automatic Peer Discovery
+
 - LLDP-based neighbor discovery
 - Automatic connection attempts to discovered peers
 - Retry logic with configurable delays
 - Connection state tracking
 
 ### 4. D-Bus Interface
+
 - Exposes pairing status via D-Bus
 - Allows external control of pairing process
 - Property change notifications
 - Signal-based event propagation
 
 ### 5. Resilient Connection Management
+
 - Automatic reconnection on connection loss
 - Connection health monitoring
 - Graceful handling of SSL errors
@@ -252,7 +267,8 @@ graph LR
 
 ## Configuration
 
-The daemon reads configuration from `/var/bmc-pairing-manager/bmc-pairing-manager.conf`:
+The daemon reads configuration from
+`/var/bmc-pairing-manager/bmc-pairing-manager.conf`:
 
 ```json
 {
@@ -268,35 +284,42 @@ The daemon reads configuration from `/var/bmc-pairing-manager/bmc-pairing-manage
 - **cert_root**: Root directory for certificate storage (default: "/")
 - **interface_id**: Network interface for LLDP monitoring (default: "eth1")
 
-
-
 ## D-Bus Interface
 
 ### Service Name
+
 `xyz.openbmc_project.BmcPairingManager`
 
 ### Object Path
+
 `/xyz/openbmc_project/BmcPairingManager`
 
 ### Interface
+
 `xyz.openbmc_project.BmcPairingManager.BmcPairingManager`
 
 ### Methods
+
 - **provisionPeer(deviceId: string)**: Initiates pairing for a specific device
 
 ### Properties
-- **peerConnected**: Connection status (NotDetermined, InProgress, Connected, NotConnected)
+
+- **peerConnected**: Connection status (NotDetermined, InProgress, Connected,
+  NotConnected)
 - **provisioned**: Boolean indicating if pairing is complete
+
 ## Usage Examples
 
 ### Pairing Commands
 
 To pair self:
+
 ```bash
 busctl call xyz.openbmc_project.BmcPairingManager /xyz/openbmc_project/BmcPairingManager xyz.openbmc_project.BmcPairingManager.BmcPairingManager ProvisionPeer s self
 ```
 
 To pair a peer (e.g., skiboards):
+
 ```bash
 busctl call xyz.openbmc_project.BmcPairingManager /xyz/openbmc_project/BmcPairingManager xyz.openbmc_project.BmcPairingManager.BmcPairingManager ProvisionPeer s skiboards
 ```
@@ -304,24 +327,27 @@ busctl call xyz.openbmc_project.BmcPairingManager /xyz/openbmc_project/BmcPairin
 ### Checking Pairing Status
 
 To check if paired:
+
 ```bash
 busctl get-property xyz.openbmc_project.BmcPairingManager /xyz/openbmc_project/BmcPairingManager xyz.openbmc_project.BmcPairingManager.BmcPairingManager provisioned
 ```
 
 To check peer connection status:
+
 ```bash
 busctl get-property xyz.openbmc_project.BmcPairingManager /xyz/openbmc_project/BmcPairingManager xyz.openbmc_project.BmcPairingManager.BmcPairingManager peerConnected
 ```
 
-
 ## Error Handling
 
 ### Connection Errors
+
 - SSL handshake failures are logged and trigger reconnection
 - Network errors result in connection state updates
 - Timeout errors cancel pending operations
 
 ### Attestation Errors
+
 - Failed attestation prevents connection establishment
 - Timeout during attestation marks peer as not paired
 - D-Bus communication errors are logged and handled gracefully
@@ -329,6 +355,7 @@ busctl get-property xyz.openbmc_project.BmcPairingManager /xyz/openbmc_project/B
 ## Dependencies
 
 ### External Libraries
+
 - **Boost.Asio**: Asynchronous I/O and networking
 - **Boost.Beast**: HTTP and WebSocket (if needed)
 - **OpenSSL**: SSL/TLS and cryptographic operations
@@ -337,6 +364,7 @@ busctl get-property xyz.openbmc_project.BmcPairingManager /xyz/openbmc_project/B
 - **nlohmann/json**: JSON configuration parsing
 
 ### System Services
+
 - **LLDP Service**: `xyz.openbmc_project.LLDP`
 - **SPDM Attestation Service**: `xyz.openbmc_project.attestation`
 - **D-Bus System Bus**: Inter-process communication
@@ -344,6 +372,7 @@ busctl get-property xyz.openbmc_project.BmcPairingManager /xyz/openbmc_project/B
 ## Threading Model
 
 The daemon uses a single-threaded event loop based on Boost.Asio:
+
 - All I/O operations are asynchronous
 - Coroutines (C++20) for sequential async code
 - No explicit thread management required
@@ -352,16 +381,19 @@ The daemon uses a single-threaded event loop based on Boost.Asio:
 ## Performance Considerations
 
 ### Connection Pooling
+
 - Single persistent connection per peer
 - Connection reuse for multiple operations
 - Automatic reconnection on failure
 
 ### Timeout Management
+
 - Configurable timeouts for all async operations
 - Prevents resource leaks from hung operations
 - Graceful cancellation of timed-out operations
 
 ### Resource Management
+
 - RAII-based resource cleanup
 - Smart pointers for automatic memory management
 - Proper cleanup on service shutdown

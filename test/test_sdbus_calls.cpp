@@ -12,18 +12,6 @@
  * - Property map extraction utilities
  */
 
-#include <gmock/gmock.h>
-#include <gtest/gtest.h>
-
-// Define LOG_ERROR stub for testing - must be before including sdbus_calls.hpp
-#ifndef LOG_ERROR
-#define LOG_ERROR(...)                                                         \
-    do                                                                         \
-    {                                                                          \
-    } while (0)
-#endif
-
-#define NSNAME TestNamespace
 #include "../include/sdbus_calls.hpp"
 
 #include <boost/asio.hpp>
@@ -37,7 +25,10 @@
 #include <variant>
 #include <vector>
 
-using namespace TestNamespace;
+#include <gmock/gmock.h>
+#include <gtest/gtest.h>
+
+using namespace reactor;
 namespace net = boost::asio;
 
 /**

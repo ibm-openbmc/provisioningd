@@ -11,9 +11,7 @@ executable(
 configure_file(
     input: 'service/xyz.openbmc_project.lldp-hosts-updater.service.in',
     output: 'xyz.openbmc_project.lldp-hosts-updater.service',
-    configuration: {
-        'IFACE': get_option('lldp_hosts_updater_iface'),
-    },
+    configuration: {'IFACE': get_option('lldp_hosts_updater_iface')},
     install: true,
     install_dir: dependency('systemd').get_variable('systemdsystemunitdir'),
 )

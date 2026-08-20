@@ -23,7 +23,7 @@ struct EventQueue
     struct DefaultEventProvider
     {
         net::awaitable<boost::system::error_code> operator()(
-            Streamer streamer, const std::string& event)
+            Streamer /*streamer*/, const std::string& event)
         {
             LOG_WARNING("Received event in defualt provider: {}", event);
             co_return boost::system::error_code{};
@@ -32,7 +32,7 @@ struct EventQueue
     struct DefaultEventConsumer
     {
         net::awaitable<boost::system::error_code> operator()(
-            Streamer streamer, const std::string& event)
+            Streamer /*streamer*/, const std::string& event)
         {
             LOG_WARNING("Received event in defualt Consumer: {}", event);
             // co_await sendHeader(streamer, "ConsumerNotFound");
@@ -129,7 +129,7 @@ struct EventQueue
             auto vw = event.substr(0, event.find(':'));
             return std::string(vw);
         }
-        return event.data();
+        return std::string(event);
     }
     void removeEvent(uint64_t id)
     {
@@ -150,7 +150,7 @@ struct EventQueue
         }
     }
     net::awaitable<boost::system::error_code> barrierHandler(
-        const std::string& event, Streamer streamer)
+        const std::string& event, Streamer /*streamer*/)
     {
         auto [id, data] = parseEvent(event);
         if (data == "Begin")
@@ -291,7 +291,7 @@ struct EventQueue
             handler_it = eventConsumers.find("default");
         }
         auto ec = co_await executeConsumer(handler_it->second, streamer,
-                                           header.data());
+                                           std::string(header));
         if (ec)
         {
             LOG_ERROR("Failed to handle event: {}", ec.message());

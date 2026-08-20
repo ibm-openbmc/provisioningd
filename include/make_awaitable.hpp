@@ -1,4 +1,6 @@
 #pragma once
+#include "name_space.hpp"
+
 #include <boost/asio.hpp>
 #include <boost/asio/coroutine.hpp>
 

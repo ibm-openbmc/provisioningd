@@ -1,5 +1,6 @@
 #pragma once
 #include "cert_generator.hpp"
+#include "certificate_exchange.hpp"
 
 using namespace NSNAME;
 constexpr auto CLIENT_PKEY_NAME = "/etc/ssl/private/client.mtls.key";

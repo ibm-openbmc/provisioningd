@@ -1,5 +1,9 @@
 #pragma once
 #include "cert_generator.hpp"
+
+#include <iomanip>
+#include <sstream>
+
 using namespace NSNAME;
 using EVP_MD_CTX_Ptr = openssl_ptr<EVP_MD_CTX, EVP_MD_CTX_free>;
 inline EVP_MD_CTX_Ptr makeEVPMDCTXPtr(EVP_MD_CTX* ptr)
@@ -68,12 +72,14 @@ bool verifyExecutableMeasurement(const std::string& exePath,
     if (signatureHex.length() % 2 != 0)
         return false;
     std::vector<unsigned char> signature(signatureHex.length() / 2);
-    for (size_t i = 0; i < signature.size(); ++i)
+    const char* hex = signatureHex.data();
+    for (unsigned char& b : signature)
     {
-        unsigned int byte;
-        std::istringstream iss(signatureHex.substr(2 * i, 2));
+        unsigned int byte = 0;
+        std::istringstream iss(std::string(hex, 2));
         iss >> std::hex >> byte;
-        signature[i] = static_cast<unsigned char>(byte);
+        b = static_cast<unsigned char>(byte);
+        hex += 2;
     }
 
     // Use EVP_DigestVerify* APIs to verify the signature

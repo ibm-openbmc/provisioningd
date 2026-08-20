@@ -19,7 +19,7 @@ get_ip() {
 ping_test() {
     ip neigh flush dev "$IF" 2>/dev/null
     sleep 1
-    ping -I "$IF" -c 2 -W 2 "$TIP" &>/dev/null
+    ping -I "$IF" -c 2 -W 2 "$TIP" >/dev/null 2>&1
 }
 
 # Recover network interface
@@ -30,7 +30,7 @@ recover() {
     sleep 2
     ip link set "$IF" up
     sleep 3
-    
+
     if ping_test; then
         echo "[$(date '+%Y-%m-%d %H:%M:%S')] Recovery OK"
         return 0

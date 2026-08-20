@@ -148,9 +148,8 @@ std::optional<std::pair<X509Ptr, EVP_PKEYPtr>> createAndSaveEntityCertificate(
 {
     auto ca_name = openssl_ptr<X509_NAME, X509_NAME_free>(
         X509_NAME_dup(X509_get_subject_name(ca.get())), X509_NAME_free);
-    auto [cert,
-          key] = create_leaf_cert(ca_pkey.get(), ca_name.get(), common_name,
-                                  days_valid);
+    auto [cert, key] =
+        create_leaf_cert(ca_pkey.get(), ca_name.get(), common_name, days_valid);
     if (!cert || !key)
     {
         LOG_ERROR("Failed to create entity certificate");
@@ -345,7 +344,7 @@ struct CertificateExchanger
                       SELF_CA_PATH());
             return makeX509Ptr(nullptr);
         }
-        return ca_cert;
+        return std::move(ca_cert);
     }
     net::awaitable<bool> sendCertificate(Streamer streamer)
     {

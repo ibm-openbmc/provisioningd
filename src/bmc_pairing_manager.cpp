@@ -191,7 +191,7 @@ net::awaitable<void> tryConnect(net::io_context& io_context,
 {
     auto dir = BmcPairingManagerObject::ConnectionDirection::outgoing;
     controller.setPeerConnected(
-        ProvisioningIface::PeerConnectionStatus::InProgress, dir);
+        BmcPairingIface::PeerConnectionStatus::InProgress, dir);
     LOG_DEBUG("Trying peer connection");
     auto sslCtx = getClientContext();
 
@@ -199,7 +199,7 @@ net::awaitable<void> tryConnect(net::io_context& io_context,
     {
         LOG_ERROR("ssl context is not available");
         controller.setPeerConnected(
-            ProvisioningIface::PeerConnectionStatus::NotConnected, dir);
+            BmcPairingIface::PeerConnectionStatus::NotConnected, dir);
         co_return;
     }
     TcpClient client(io_context.get_executor(), *sslCtx);
@@ -208,14 +208,14 @@ net::awaitable<void> tryConnect(net::io_context& io_context,
     if (ec)
     {
         controller.setPeerConnected(
-            ProvisioningIface::PeerConnectionStatus::NotConnected, dir);
+            BmcPairingIface::PeerConnectionStatus::NotConnected, dir);
         co_return;
     }
     controller.setPeerConnected(
-        ProvisioningIface::PeerConnectionStatus::Connected, dir);
+        BmcPairingIface::PeerConnectionStatus::Connected, dir);
     co_await monitorBmc(io_context, client);
     controller.setPeerConnected(
-        ProvisioningIface::PeerConnectionStatus::NotConnected, dir);
+        BmcPairingIface::PeerConnectionStatus::NotConnected, dir);
 }
 
 std::shared_ptr<BmcResponder> makeBmcResponder(
@@ -227,8 +227,8 @@ std::shared_ptr<BmcResponder> makeBmcResponder(
 
     bmcResponder->onConnectionChange([&controller](bool connected) {
         controller.setPeerConnected(
-            connected ? ProvisioningIface::PeerConnectionStatus::Connected
-                      : ProvisioningIface::PeerConnectionStatus::NotConnected,
+            connected ? BmcPairingIface::PeerConnectionStatus::Connected
+                      : BmcPairingIface::PeerConnectionStatus::NotConnected,
             BmcPairingManagerObject::ConnectionDirection::incoming);
     });
     return bmcResponder;
@@ -240,7 +240,7 @@ net::awaitable<void> onNeighbourFound(
     LOG_INFO("LLDP Neighbour IP found: {} Name: {}", address, name);
     if (controller.peerConnected(
             BmcPairingManagerObject::ConnectionDirection::outgoing) ==
-        ProvisioningIface::PeerConnectionStatus::Connected)
+        BmcPairingIface::PeerConnectionStatus::Connected)
     {
         LOG_INFO("Peer already connected, skipping connection attempt");
         co_return;
@@ -259,10 +259,10 @@ net::awaitable<void> onSpdmStateChange(
     {
         co_return;
     }
-    co_await controller.setProvisioned(*val);
+    co_await controller.setPaired(*val);
     if (*val)
     {
-        LOG_INFO("SPDM provisioning completed successfully");
+        LOG_INFO("SPDM pairing completed successfully");
 
         // Reset existing responder to close any active connections gracefully
         if (bmcResponder)
@@ -281,19 +281,20 @@ net::awaitable<void> onSpdmStateChange(
                                         port, controller);
         co_return;
     }
-    LOG_INFO("SPDM provisioning completed with failed status");
+    LOG_INFO("SPDM pairing completed with failed status");
 }
 
 net::awaitable<void> startSpdm(
     std::shared_ptr<sdbusplus::asio::connection> conn, net::io_context& ioc,
     short port, const std::string& iface, BmcPairingManagerObject& controller,
-    std::shared_ptr<BmcResponder>& bmcResponder, const std::string& deviceName)
+    std::shared_ptr<BmcResponder>& /*bmcResponder*/,
+    const std::string& deviceName)
 {
     try
     {
         // This method would start the SPDM provisioning process.
         // Implementation would depend on the specific requirements.
-        LOG_INFO("Starting SPDM provisioning");
+        LOG_INFO("Starting SPDM pairing");
         auto device = std::format(ATTESTATION_DEVICE_PATH, deviceName);
         auto [ec, msg] =
             co_await awaitable_dbus_method_call<sdbusplus::message_t>(
@@ -303,7 +304,6 @@ net::awaitable<void> startSpdm(
         if (ec)
         {
             LOG_ERROR("Failed to start spdm: {}", ec.message());
-            controller.peerProvisioned(false);
             co_return;
         }
 
@@ -313,7 +313,6 @@ net::awaitable<void> startSpdm(
 
         if (val && *val)
         {
-            controller.peerProvisioned(true);
             auto ip = co_await getRemoteIp(*conn, iface);
             if (ip)
             {
@@ -324,12 +323,11 @@ net::awaitable<void> startSpdm(
                 co_return;
             }
         }
-        LOG_ERROR("SPDM provisioning failed or timed out");
-        controller.peerProvisioned(false);
+        LOG_ERROR("SPDM pairing failed or timed out");
     }
     catch (std::exception& e)
     {
-        LOG_ERROR("SPDM provisioning failed {}", e.what());
+        LOG_ERROR("SPDM pairing failed {}", e.what());
     }
 }
 nlohmann::json loadConfig(const std::string& configPath)
@@ -405,7 +403,7 @@ std::shared_ptr<BmcResponder> initializeResponder(
     return makeBmcResponder(io_context, std::move(*sslCtx), port, controller);
 }
 
-std::function<void(const std::string&)> createProvisionHandler(
+std::function<void(const std::string&)> createPairingHandler(
     net::io_context& io_context,
     std::shared_ptr<sdbusplus::asio::connection> conn, short port,
     const std::string& iface, BmcPairingManagerObject& controller,
@@ -413,7 +411,7 @@ std::function<void(const std::string&)> createProvisionHandler(
 {
     return [&io_context, conn, port, &iface, &controller,
             &bmcResponder](const std::string& deviceName) {
-        LOG_INFO("Provisioning started");
+        LOG_INFO("Pairing started");
         net::co_spawn(io_context,
                       std::bind_front(startSpdm, conn, std::ref(io_context),
                                       port, iface, std::ref(controller),
@@ -493,7 +491,7 @@ int main(int argc, const char* argv[])
         Tpm2::getInstance(); // Initialize TPM2 provider
         net::io_context io_context;
 
-        auto config = loadAndValidateConfig(conf.value().data());
+        auto config = loadAndValidateConfig(std::string(conf.value()));
 
         auto conn = std::make_shared<sdbusplus::asio::connection>(io_context);
         BmcPairingManagerObject controller(io_context, conn);
@@ -508,7 +506,7 @@ int main(int argc, const char* argv[])
         auto bmcResponder =
             initializeResponder(io_context, config.port, controller);
 
-        controller.setProvisionHandler(createProvisionHandler(
+        controller.setPairingHandler(createPairingHandler(
             io_context, conn, config.port, config.interface_id, controller,
             bmcResponder));
 

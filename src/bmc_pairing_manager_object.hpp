@@ -3,21 +3,21 @@
 #include "pic_controller.hpp"
 #include "sdbus_calls.hpp"
 
+#include <xyz/openbmc_project/BmcPairing/BmcPairing/server.hpp>
 #include <xyz/openbmc_project/Common/error.hpp>
-#include <xyz/openbmc_project/Provisioning/Provisioning/server.hpp>
+
 using namespace reactor;
 
-using namespace sdbusplus::server::xyz::openbmc_project::provisioning;
-using ProvisioningIface =
-    sdbusplus::server::xyz::openbmc_project::provisioning::Provisioning;
-using Ifaces = sdbusplus::server::object_t<ProvisioningIface>;
+using namespace sdbusplus::server::xyz::openbmc_project::bmc_pairing;
+using BmcPairingIface =
+    sdbusplus::server::xyz::openbmc_project::bmc_pairing::BmcPairing;
+using Ifaces = sdbusplus::server::object_t<BmcPairingIface>;
 using InsufficientPermission =
     sdbusplus::xyz::openbmc_project::Common::Error::InsufficientPermission;
 using InternalFailure =
     sdbusplus::xyz::openbmc_project::Common::Error::InternalFailure;
 using InvalidArgument =
     sdbusplus::xyz::openbmc_project::Common::Error::InvalidArgument;
-
 using UnsupportedRequest =
     sdbusplus::xyz::openbmc_project::Common::Error::UnsupportedRequest;
 using NotAllowed = sdbusplus::xyz::openbmc_project::Common::Error::NotAllowed;
@@ -36,12 +36,12 @@ struct BmcPairingManagerObject : Ifaces
         PeerConnectionStatus::NotDetermined,
         PeerConnectionStatus::NotDetermined};
     PicController picController;
-    using PROVISIONING_HANDLER = std::function<void(const std::string&)>;
-    PROVISIONING_HANDLER provisionHandler;
+    using PAIRING_HANDLER = std::function<void(const std::string&)>;
+    PAIRING_HANDLER pairingHandler;
 
-    static constexpr auto busName = "xyz.openbmc_project.Provisioning";
-    static constexpr auto objPath = Provisioning::instance_path;
-    static constexpr auto interface = Provisioning::interface;
+    static constexpr auto busName = "xyz.openbmc_project.BmcPairing";
+    static constexpr auto objPath = BmcPairingIface::instance_path;
+    static constexpr auto interface = BmcPairingIface::interface;
 
     BmcPairingManagerObject() = delete;
     ~BmcPairingManagerObject() = default;
@@ -49,10 +49,11 @@ struct BmcPairingManagerObject : Ifaces
     BmcPairingManagerObject& operator=(const BmcPairingManagerObject&) = delete;
     BmcPairingManagerObject(BmcPairingManagerObject&&) = delete;
     BmcPairingManagerObject& operator=(BmcPairingManagerObject&&) = delete;
+
     BmcPairingManagerObject(net::io_context& ctx,
                             std::shared_ptr<sdbusplus::asio::connection> conn) :
         Ifaces(*conn, objPath, Ifaces::action::defer_emit), ioContext(ctx),
-        conn(conn), picController() // Use default I2C parameters
+        conn(conn), picController()
     {
         // Initialize PicController asynchronously
         net::co_spawn(ctx, initializePicController(), net::detached);
@@ -68,7 +69,7 @@ struct BmcPairingManagerObject : Ifaces
         {
             LOG_INFO("PicController initialized successfully");
             // Update D-Bus property with loaded state
-            Ifaces::provisioned(picController.getState(), false);
+            Ifaces::paired(picController.getState(), false);
         }
         else
         {
@@ -76,25 +77,32 @@ struct BmcPairingManagerObject : Ifaces
                 "PicController initialization failed, using default state");
         }
     }
-    void provisionPeer(std::string deviceId) override
+
+    /** @brief Implementation for PairPeer — starts pairing on the peer BMC.
+     *  Returns an object path implementing xyz.openbmc_project.Common.Progress.
+     */
+    sdbusplus::message::object_path pairPeer(std::string bmcId) override
     {
-        if (deviceId == "self")
+        if (bmcId == "self")
         {
-            // Spawn async task to set provisioned state
-            net::co_spawn(ioContext, setProvisioned(true), net::detached);
-            return;
+            // Spawn async task to set paired state
+            net::co_spawn(ioContext, setPaired(true), net::detached);
+            return sdbusplus::message::object_path(objPath);
         }
-        if (!provisioned())
+        if (!paired())
         {
-            LOG_ERROR("This BMC is not provisioned");
+            LOG_ERROR("This BMC is not paired");
             throw NotAllowed();
         }
-        provisionHandler(deviceId);
+        pairingHandler(bmcId);
+        return sdbusplus::message::object_path(objPath);
     }
-    void setProvisionHandler(PROVISIONING_HANDLER handler)
+
+    void setPairingHandler(PAIRING_HANDLER handler)
     {
-        provisionHandler = std::move(handler);
+        pairingHandler = std::move(handler);
     }
+
     PeerConnectionStatus peerConnected() const override
     {
         auto state = getHighestTrustedConnectionState();
@@ -102,14 +110,17 @@ struct BmcPairingManagerObject : Ifaces
                   convertPeerConnectionStatusToString(state));
         return state;
     }
-    PeerConnectionStatus peerConnected(ConnectionDirection dir)
+
+    PeerConnectionStatus peerConnected(ConnectionDirection dir) const
     {
         return trustedConnectionState[static_cast<size_t>(dir)];
     }
-    bool provisioned() const override
+
+    bool paired() const override
     {
         return picController.getState();
     }
+
     void setPeerConnected(PeerConnectionStatus value, ConnectionDirection dir)
     {
         LOG_DEBUG("Setting PeerConnected state {}",
@@ -117,26 +128,27 @@ struct BmcPairingManagerObject : Ifaces
         trustedConnectionState[static_cast<size_t>(dir)] = value;
         Ifaces::peerConnected(getHighestTrustedConnectionState(), false);
     }
-    net::awaitable<void> setProvisioned(bool value)
+
+    net::awaitable<void> setPaired(bool value)
     {
-        LOG_DEBUG("Setting Provisioned state {}", value);
+        LOG_DEBUG("Setting Paired state {}", value);
         bool success = co_await picController.setState(value);
         if (success)
         {
-            LOG_INFO("Successfully set provisioned state to {} via I2C", value);
+            LOG_INFO("Successfully set paired state to {} via I2C", value);
         }
         else
         {
-            LOG_WARNING("Failed to set provisioned state to {} via I2C", value);
+            LOG_WARNING("Failed to set paired state to {} via I2C", value);
         }
         // Update D-Bus property with actual state from picController
-        Ifaces::provisioned(picController.getState(), false);
+        Ifaces::paired(picController.getState(), false);
     }
 
   private:
     /**
-     * @brief Determines the highest value in trustedConnectionState entries
-     * @return The highest PeerConnectionStatus value from the array
+     * @brief Returns the highest-priority connection state across both
+     *        incoming and outgoing directions.
      */
     PeerConnectionStatus getHighestTrustedConnectionState() const
     {
@@ -144,18 +156,13 @@ struct BmcPairingManagerObject : Ifaces
             ConnectionDirection::incoming)];
         auto outgoingState = trustedConnectionState[static_cast<size_t>(
             ConnectionDirection::outgoing)];
-#if 0
-        LOG_DEBUG("Incoming connection state: {}",
-                  convertPeerConnectionStatusToString(incomingState));
-        LOG_DEBUG("Outgoing connection state: {}",
-                  convertPeerConnectionStatusToString(outgoingState));
-#endif
+
         auto highestState = maxStatus(incomingState, outgoingState);
         LOG_DEBUG("Highest connection state: {}",
                   convertPeerConnectionStatusToString(highestState));
-
         return highestState;
     }
+
     PeerConnectionStatus maxStatus(PeerConnectionStatus first,
                                    PeerConnectionStatus second) const
     {

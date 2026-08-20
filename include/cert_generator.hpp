@@ -728,7 +728,7 @@ inline openssl_ptr<X509, X509_free> create_certificate(
     std::uniform_int_distribution<uint64_t> dis(
         1, std::numeric_limits<uint64_t>::max());
     ASN1_INTEGER_set_uint64(X509_get_serialNumber(cert.get()), dis(gen));
-    
+
     // Set notBefore to Unix epoch so the cert is valid regardless of clock skew
     ASN1_TIME_set(X509_get_notBefore(cert.get()), 0);
 
@@ -831,7 +831,8 @@ inline std::pair<X509Ptr, EVP_PKEYPtr> create_leaf_cert(
     return std::make_pair(std::move(cert), std::move(pkey));
 }
 
-inline bool checkTimeValidity(const ASN1_TIME* time, const char* message)
+inline bool checkTimeValidity(const ASN1_TIME* /*time*/,
+                              const char* /*message*/)
 {
     // if (X509_cmp_current_time(time) > 0)
     // {
@@ -841,7 +842,7 @@ inline bool checkTimeValidity(const ASN1_TIME* time, const char* message)
     return true;
 }
 
-inline bool checkTimeExpiry(const ASN1_TIME* time, const char* message)
+inline bool checkTimeExpiry(const ASN1_TIME* /*time*/, const char* /*message*/)
 {
     // if (X509_cmp_current_time(time) < 0)
     // {
@@ -925,7 +926,8 @@ bool checkValidity(const openssl_ptr<X509, X509_free>& cert)
         if (!bn || BN_is_zero(bn) || BN_is_negative(bn))
         {
             BN_free(bn);
-            LOG_ERROR("Certificate serial number is invalid (zero or negative)");
+            LOG_ERROR(
+                "Certificate serial number is invalid (zero or negative)");
             return false;
         }
         BN_free(bn);
