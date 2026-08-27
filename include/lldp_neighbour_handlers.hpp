@@ -38,7 +38,7 @@ auto makeNeighbourDiscoveryHandler(Handler handler,
                                    std::function<void()> fallback = {})
 {
     return [handler = std::move(handler), fallback = std::move(fallback)](
-               const boost::system::error_code& ec,
+               const boost::system::error_code& /*ec*/,
                std::optional<sdbusplus::message_t> m) -> net::awaitable<void> {
         if (!m)
         {

@@ -82,16 +82,16 @@ struct TcpStreamType
     void accept(Handler&& handler)
     {
         auto socket = std::make_shared<stream_type>(context, ssl_context_);
-        acceptor_.async_accept(socket->lowest_layer(),
-                               [this, socket, handler = std::move(handler)](
-                                   boost::system::error_code ec) {
-                                   if (!ec)
-                                   {
-                                       configureSocketKeepalive(
-                                           socket->lowest_layer());
-                                       handler(std::move(socket));
-                                   }
-                               });
+        acceptor_.async_accept(
+            socket->lowest_layer(),
+            [this, socket,
+             handler = std::move(handler)](boost::system::error_code ec) {
+                if (!ec)
+                {
+                    configureSocketKeepalive(socket->lowest_layer());
+                    handler(std::move(socket));
+                }
+            });
     }
     auto getRemoteEndpoint(stream_type& socket)
     {
@@ -135,7 +135,7 @@ struct UnixStreamType
                                    }
                                });
     }
-    auto getRemoteEndpoint(stream_type& socket)
+    auto getRemoteEndpoint(stream_type& /*socket*/)
     {
         return tcp::endpoint();
     }

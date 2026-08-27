@@ -123,4 +123,4 @@ class JsonSerializer
     const std::string serPath;
     nlohmann::json jsonData;
 };
-}
+} // namespace NSNAME

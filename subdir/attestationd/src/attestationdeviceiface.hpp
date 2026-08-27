@@ -28,9 +28,8 @@ struct AttestationDeviceIface
         conn(conn), dbusServer(dbusServer), responderInfo(rInfo),
         attestationHandler(handler)
     {
-        
         auto ifacePath = std::format(objPath, responderInfo.id);
-        LOG_DEBUG("Creatign request at {}",ifacePath);
+        LOG_DEBUG("Creatign request at {}", ifacePath);
         iface = dbusServer.add_interface(ifacePath, interface);
         // test generic properties
         iface->register_method("attest", [this]() { attest(); });

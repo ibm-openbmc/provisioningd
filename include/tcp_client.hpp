@@ -28,8 +28,8 @@ inline AwaitableResult<net::ip::tcp::resolver::results_type> awaitable_resolve(
             //     host, port,
             //     [handler = std::move(handler)](
             //         boost::system::error_code ec,
-            //         net::ip::tcp::resolver::results_type results) mutable {
-            //         handler(ec, std::move(results));
+            //         net::ip::tcp::resolver::results_type results) mutable
+            //         { handler(ec, std::move(results));
             //     });
             boost::system::error_code ec;
             auto results = resolver.resolve(host, port, ec);

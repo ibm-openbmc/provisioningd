@@ -43,6 +43,7 @@
  * @endcode
  */
 #pragma once
+#include "logger.hpp"
 #include "make_awaitable.hpp"
 
 #include <sdbusplus/asio/connection.hpp>
@@ -685,8 +686,8 @@ T getPropertyFromMap(boost::system::error_code& ec, const PropertyMap& propMap,
 /**
  * @brief Implementation helper for getPropertiesFromMap
  *
- * Internal function used by getPropertiesFromMap to extract multiple
- * properties.
+ * Sequentially extracts each property in order. Once an error is set,
+ * all remaining properties are left as their default-constructed values.
  *
  * @tparam ArgTypes Types of properties to extract
  * @tparam Args Property name types
@@ -700,9 +701,14 @@ inline std::tuple<ArgTypes...> getPropertiesFromMapImpl(
     // Make sure ArgTypes and Args have the same size
     static_assert(sizeof...(ArgTypes) == sizeof...(Args),
                   "Size mismatch between types and arguments");
-    return std::make_tuple(
-        getPropertyFromMap<std::tuple_element_t<I, std::tuple<ArgTypes...>>>(
-            ec, propMap, std::get<I>(std::forward_as_tuple(args...)))...);
+    std::tuple<ArgTypes...> result{};
+    // Fold over indices left-to-right; once ec is set the per-property
+    // function returns the default value immediately (see getPropertyFromMap).
+    ((std::get<I>(result) =
+          getPropertyFromMap<std::tuple_element_t<I, std::tuple<ArgTypes...>>>(
+              ec, propMap, std::get<I>(std::forward_as_tuple(args...)))),
+     ...);
+    return result;
 }
 
 /**

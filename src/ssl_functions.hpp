@@ -1,8 +1,16 @@
 #pragma once
+#include "beastdefs.hpp"
+#include "logger.hpp"
+
+#include <openssl/x509.h>
+#include <openssl/x509v3.h>
+
 #include <boost/asio.hpp>
+#include <boost/asio/ssl.hpp>
 
 #include <filesystem>
 #include <format>
+#include <optional>
 #include <string>
 using namespace reactor;
 namespace fs = std::filesystem;
@@ -26,7 +34,8 @@ inline std::string SERVER_PKEY_PATH()
 {
     return "/etc/ssl/private/server_pkey.pem";
 }
-inline bool sslVerifyCallback(bool preverified, boost::asio::ssl::verify_context& ctx)
+inline bool sslVerifyCallback(bool preverified,
+                              boost::asio::ssl::verify_context& ctx)
 {
     X509_STORE_CTX* store_ctx = ctx.native_handle();
     int err = X509_STORE_CTX_get_error(store_ctx);
@@ -36,17 +45,20 @@ inline bool sslVerifyCallback(bool preverified, boost::asio::ssl::verify_context
     char subject[256] = {};
     if (cert != nullptr)
     {
-        X509_NAME_oneline(X509_get_subject_name(cert), subject, sizeof(subject));
+        X509_NAME_oneline(X509_get_subject_name(cert), subject,
+                          sizeof(subject));
     }
 
     if (!preverified)
     {
-        LOG_ERROR("SSL certificate verification failed: depth={}, error={} ({}), subject={}",
-                  depth, err, X509_verify_cert_error_string(err), subject);
+        LOG_ERROR(
+            "SSL certificate verification failed: depth={}, error={} ({}), subject={}",
+            depth, err, X509_verify_cert_error_string(err), subject);
     }
     else
     {
-        LOG_DEBUG("SSL certificate verification ok: depth={}, subject={}", depth, subject);
+        LOG_DEBUG("SSL certificate verification ok: depth={}, subject={}",
+                  depth, subject);
     }
     return preverified;
 }

@@ -1,9 +1,14 @@
-project('bmc-pairing-manager', 'cpp',default_options: ['cpp_std=c++23','buildtype=debugoptimized',])
+project(
+    'bmc-pairing-manager',
+    'cpp',
+    meson_version: '>=1.1.1',
+    default_options: ['cpp_std=c++23', 'buildtype=debugoptimized'],
+)
 boost_dep = dependency('boost', version: '>= 1.86', required: true)
 openssl_dep = dependency('openssl', version: '>= 3.0', required: true)
 sdeventplus_dep = dependency('sdeventplus')
-sdbusplus_dep =dependency('sdbusplus')
-dbus_interfaces_dep =dependency('phosphor-dbus-interfaces')
+sdbusplus_dep = dependency('sdbusplus')
+dbus_interfaces_dep = dependency('phosphor-dbus-interfaces')
 
 # ---------------------------------------------------------------------------
 # sdbusplus version detection
@@ -26,16 +31,26 @@ if cxx.has_type(
     dependencies: sdbusplus_dep,
 )
     add_project_arguments('-DSDBUSPLUS_NEW_API', language: 'cpp')
-    message('sdbusplus: new API detected (sdbusplus::match / sdbusplus::object_path)')
+    message(
+        'sdbusplus: new API detected (sdbusplus::match / sdbusplus::object_path)',
+    )
 else
-    message('sdbusplus: old API detected (sdbusplus::bus::match::match / sdbusplus::message::object_path)')
+    message(
+        'sdbusplus: old API detected (sdbusplus::bus::match::match / sdbusplus::message::object_path)',
+    )
 endif
 
 bmc_pairing_manager_dep = declare_dependency(
-    dependencies:[sdbusplus_dep,sdeventplus_dep,openssl_dep,boost_dep,dbus_interfaces_dep],
-    include_directories:['include']
+    dependencies: [
+        sdbusplus_dep,
+        sdeventplus_dep,
+        openssl_dep,
+        boost_dep,
+        dbus_interfaces_dep,
+    ],
+    include_directories: ['include'],
 )
-bmc_pairing_manager_default_busname = 'xyz.openbmc_project.Provisioning'
+bmc_pairing_manager_default_busname = 'xyz.openbmc_project.BmcPairing'
 configure_file(
     input: 'service/xyz.openbmc_project.bmc-pairing-manager.service.in',
     output: 'xyz.openbmc_project.bmc-pairing-manager.service',
@@ -46,18 +61,19 @@ configure_file(
     install: true,
     install_dir: dependency('systemd').get_variable('systemdsystemunitdir'),
 )
-executable('bmc-pairing-manager',
-  ['src/bmc_pairing_manager.cpp',
-  ],
-  install: true,
-  include_directories:['src'],
-  cpp_args: ['-DBOOST_ASIO_DISABLE_THREADS'],
-  dependencies:bmc_pairing_manager_dep,
-  install_dir: '/usr/bin'
+executable(
+    'bmc-pairing-manager',
+    ['src/bmc_pairing_manager.cpp'],
+    install: true,
+    include_directories: ['src'],
+    cpp_args: ['-DBOOST_ASIO_DISABLE_THREADS'],
+    dependencies: bmc_pairing_manager_dep,
+    install_dir: '/usr/bin',
 )
 
-install_data('service/xyz.openbmc_project.bmc-pairing-manager.conf',
-  install_dir:'/etc/dbus-1/system.d/'
+install_data(
+    'service/xyz.openbmc_project.bmc-pairing-manager.conf',
+    install_dir: '/etc/dbus-1/system.d/',
 )
 
 install_data(
@@ -71,7 +87,7 @@ if (get_option('pingtest') == true)
     install_data(
         'service/simple-fix-minimal.sh',
         install_dir: '/usr/bin',
-        install_mode: 'rwxr-xr-x'
+        install_mode: 'rwxr-xr-x',
     )
     # Configure and install network monitor service
     configure_file(

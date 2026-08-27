@@ -39,19 +39,21 @@ enum class I2CError
     // --- Open/Setup Errors ---
     OpenFailed,       // Generic open failure (e.g. device node missing)
     IoctlFailed,      // ioctl(I2C_SLAVE) failed for an unclassified reason
-    PermissionDenied, // Insufficient permissions to open the device (EACCES/EPERM)
-    DeviceLocked,     // Device node is locked / exclusively held (EBUSY on open)
-    AlreadyOpen,      // open() called on an already-open client
+    PermissionDenied, // Insufficient permissions to open the device
+                      // (EACCES/EPERM)
+    DeviceLocked, // Device node is locked / exclusively held (EBUSY on open)
+    AlreadyOpen,  // open() called on an already-open client
 
     // --- Address Errors ---
-    InvalidAddress,      // I2C slave address is structurally invalid
-    AddressOutOfRange,   // Address outside the legal I2C range (EINVAL from ioctl)
+    InvalidAddress,    // I2C slave address is structurally invalid
+    AddressOutOfRange, // Address outside the legal I2C range (EINVAL from
+                       // ioctl)
 
     // --- Transfer Errors ---
-    WriteFailed,  // Write rejected/NACK not already covered below
-    ReadFailed,   // Read rejected/NACK not already covered below
-    BusError,     // I2C bus-level error: NACK, arbitration loss, line fault (EIO)
-    BusBusy,      // Bus or device held by another transaction (EBUSY on transfer)
+    WriteFailed, // Write rejected/NACK not already covered below
+    ReadFailed,  // Read rejected/NACK not already covered below
+    BusError, // I2C bus-level error: NACK, arbitration loss, line fault (EIO)
+    BusBusy,  // Bus or device held by another transaction (EBUSY on transfer)
     InvalidLength, // Zero-length or otherwise invalid transfer size (EINVAL)
 
     // --- Buffer/Size Errors ---
@@ -345,7 +347,8 @@ class I2CClient
                 }
             }
 
-            // Check partial read — buffer provided but device returned too few bytes
+            // Check partial read — buffer provided but device returned too few
+            // bytes
             if (!ec && bytesRead > 0 && bytesRead < buffer.size())
             {
                 LOG_WARNING(
@@ -770,18 +773,16 @@ class I2CClient
      * @param attempt   Current attempt index (0-based) for log messages.
      * @param dataSize  Number of bytes in the transfer (for EINVAL messages).
      */
-    std::optional<I2CError>
-        classifyTransferError(const boost::system::error_code& ec,
-                              std::string_view op, int attempt,
-                              size_t dataSize) const
+    std::optional<I2CError> classifyTransferError(
+        const boost::system::error_code& ec, std::string_view op, int attempt,
+        size_t dataSize) const
     {
         int nativeErr = ec.value();
 
         if (nativeErr == EIO)
         {
-            LOG_WARNING("I2C bus error on {} attempt {}/{} to 0x{:02X}: {}",
-                        op, attempt + 1, maxRetries_, slaveAddress_,
-                        ec.message());
+            LOG_WARNING("I2C bus error on {} attempt {}/{} to 0x{:02X}: {}", op,
+                        attempt + 1, maxRetries_, slaveAddress_, ec.message());
             return std::nullopt; // retriable
         }
         if (nativeErr == EBUSY)
@@ -798,8 +799,8 @@ class I2CClient
         }
         if (nativeErr == ENXIO || nativeErr == ENODEV)
         {
-            LOG_ERROR("I2C device 0x{:02X} not present during {}", slaveAddress_,
-                      op);
+            LOG_ERROR("I2C device 0x{:02X} not present during {}",
+                      slaveAddress_, op);
             return I2CError::DeviceNotPresent; // fatal
         }
 

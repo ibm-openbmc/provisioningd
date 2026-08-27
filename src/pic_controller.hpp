@@ -432,9 +432,7 @@ class PicControllerImpl
      * @brief Construct a PicControllerImpl with custom strategy
      * @param strategy The persistence strategy instance
      */
-    explicit PicControllerImpl(Strategy s) :
-        strategy(std::move(s))
-    {}
+    explicit PicControllerImpl(Strategy s) : strategy(std::move(s)) {}
 
     /**
      * @brief Initialize the persistence strategy

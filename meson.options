@@ -2,7 +2,7 @@ option(
     'attestation_stub',
     type: 'boolean',
     description: 'Enables attestation stub',
-    value:true
+    value: true,
 )
 
 option(
@@ -23,12 +23,7 @@ option(
     'pingtest',
     type: 'boolean',
     description: 'Enables pingtest tool',
-    value:true
+    value: true,
 )
 
-option(
-    'tests',
-    type: 'feature',
-    description: 'Build unit tests',
-    value: 'auto'
-)
+option('tests', type: 'feature', description: 'Build unit tests', value: 'auto')
