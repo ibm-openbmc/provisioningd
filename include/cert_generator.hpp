@@ -71,12 +71,18 @@ inline FilePtr makeFilePtr(FILE* ptr)
 }
 class Tpm2
 {
+  public:
+    Tpm2(const Tpm2&) = delete;
+    Tpm2& operator=(const Tpm2&) = delete;
+    Tpm2(Tpm2&&) = delete;
+    Tpm2& operator=(Tpm2&&) = delete;
+
+  private:
     OSSL_LIB_CTX* libCtx{nullptr};
     void* tpmProviderHandle{nullptr};
 
-    Tpm2()
+    Tpm2() : libCtx(OSSL_LIB_CTX_new())
     {
-        libCtx = OSSL_LIB_CTX_new();
         if (libCtx == nullptr)
         {
             throw std::runtime_error("Failed to allocate OSSL_LIB_CTX");
@@ -251,9 +257,10 @@ class Tpm2
 inline void printLastError()
 {
     unsigned long err = ERR_get_error();
-    char err_buf[256];
-    ERR_error_string_n(err, err_buf, sizeof(err_buf));
-    LOG_ERROR("OpenSSL error: {}", err_buf);
+    std::array<char, 256> err_buf{};
+    // NOLINTNEXTLINE(cppcoreguidelines-pro-bounds-array-to-pointer-decay)
+    ERR_error_string_n(err, err_buf.data(), err_buf.size());
+    LOG_ERROR("OpenSSL error: {}", err_buf.data());
 }
 // Convert PEM certificate file to DER format and save to file
 bool pemCertToDer(const std::string& pemPath, const std::string& derPath)
@@ -342,7 +349,8 @@ inline bool pemStringToDer(const std::string& pem, std::vector<uint8_t>& der)
     if (pem.empty())
         return false;
 
-    BIOPtr inBio = makeBIOPtr(BIO_new_mem_buf(pem.data(), (int)pem.size()));
+    BIOPtr inBio =
+        makeBIOPtr(BIO_new_mem_buf(pem.data(), static_cast<int>(pem.size())));
     if (!inBio)
         return false;
 
@@ -363,8 +371,10 @@ inline bool pemStringToDer(const std::string& pem, std::vector<uint8_t>& der)
     if (!bptr || bptr->length == 0)
         return false;
 
+    // NOLINTBEGIN(cppcoreguidelines-pro-type-reinterpret-cast,cppcoreguidelines-pro-bounds-pointer-arithmetic)
     der.assign(reinterpret_cast<uint8_t*>(bptr->data),
                reinterpret_cast<uint8_t*>(bptr->data) + bptr->length);
+    // NOLINTEND(cppcoreguidelines-pro-type-reinterpret-cast,cppcoreguidelines-pro-bounds-pointer-arithmetic)
     return true;
 }
 
@@ -374,7 +384,8 @@ inline bool derToPemString(const std::vector<uint8_t>& der, std::string& pem)
     if (der.empty())
         return false;
 
-    BIOPtr inBio = makeBIOPtr(BIO_new_mem_buf(der.data(), (int)der.size()));
+    BIOPtr inBio =
+        makeBIOPtr(BIO_new_mem_buf(der.data(), static_cast<int>(der.size())));
     if (!inBio)
         return false;
 
@@ -395,6 +406,7 @@ inline bool derToPemString(const std::vector<uint8_t>& der, std::string& pem)
     if (!bptr || bptr->length == 0)
         return false;
 
+    // NOLINTNEXTLINE(cppcoreguidelines-pro-bounds-pointer-arithmetic)
     pem.assign(bptr->data, bptr->data + bptr->length);
     return true;
 }
@@ -432,8 +444,9 @@ inline bool pemStringToDerFile(const std::string& pem,
     std::ofstream out(derPath, std::ios::out | std::ios::binary);
     if (!out)
         return false;
+    // NOLINTNEXTLINE(cppcoreguidelines-pro-type-reinterpret-cast)
     out.write(reinterpret_cast<const char*>(der.data()),
-              (std::streamsize)der.size());
+              static_cast<std::streamsize>(der.size()));
     return out.good();
 }
 
@@ -447,7 +460,7 @@ inline bool derBufferToPemCertFile(const std::vector<uint8_t>& der,
     std::ofstream out(pemPath, std::ios::out | std::ios::binary);
     if (!out)
         return false;
-    out.write(pem.data(), (std::streamsize)pem.size());
+    out.write(pem.data(), static_cast<std::streamsize>(pem.size()));
     return out.good();
 }
 
@@ -484,8 +497,9 @@ inline bool pemKeyStringToDerFile(const std::string& pem,
     std::ofstream out(derPath, std::ios::out | std::ios::binary);
     if (!out)
         return false;
+    // NOLINTNEXTLINE(cppcoreguidelines-pro-type-reinterpret-cast)
     out.write(reinterpret_cast<const char*>(der.data()),
-              (std::streamsize)der.size());
+              static_cast<std::streamsize>(der.size()));
     return out.good();
 }
 
@@ -499,7 +513,7 @@ inline bool derBufferToPemKeyFile(const std::vector<uint8_t>& der,
     std::ofstream out(pemPath, std::ios::out | std::ios::binary);
     if (!out)
         return false;
-    out.write(pem.data(), (std::streamsize)pem.size());
+    out.write(pem.data(), static_cast<std::streamsize>(pem.size()));
     return out.good();
 }
 
@@ -509,7 +523,8 @@ inline bool pemKeyStringToDer(const std::string& pem, std::vector<uint8_t>& der)
     if (pem.empty())
         return false;
 
-    BIOPtr inBio = makeBIOPtr(BIO_new_mem_buf(pem.data(), (int)pem.size()));
+    BIOPtr inBio =
+        makeBIOPtr(BIO_new_mem_buf(pem.data(), static_cast<int>(pem.size())));
     if (!inBio)
         return false;
 
@@ -531,8 +546,10 @@ inline bool pemKeyStringToDer(const std::string& pem, std::vector<uint8_t>& der)
     if (!bptr || bptr->length == 0)
         return false;
 
+    // NOLINTBEGIN(cppcoreguidelines-pro-type-reinterpret-cast,cppcoreguidelines-pro-bounds-pointer-arithmetic)
     der.assign(reinterpret_cast<uint8_t*>(bptr->data),
                reinterpret_cast<uint8_t*>(bptr->data) + bptr->length);
+    // NOLINTEND(cppcoreguidelines-pro-type-reinterpret-cast,cppcoreguidelines-pro-bounds-pointer-arithmetic)
     return true;
 }
 
@@ -542,7 +559,8 @@ inline bool derKeyToPemString(const std::vector<uint8_t>& der, std::string& pem)
     if (der.empty())
         return false;
 
-    BIOPtr inBio = makeBIOPtr(BIO_new_mem_buf(der.data(), (int)der.size()));
+    BIOPtr inBio =
+        makeBIOPtr(BIO_new_mem_buf(der.data(), static_cast<int>(der.size())));
     if (!inBio)
         return false;
 
@@ -564,6 +582,7 @@ inline bool derKeyToPemString(const std::vector<uint8_t>& der, std::string& pem)
     if (!bptr || bptr->length == 0)
         return false;
 
+    // NOLINTNEXTLINE(cppcoreguidelines-pro-bounds-pointer-arithmetic)
     pem.assign(bptr->data, bptr->data + bptr->length);
     return true;
 }
@@ -612,6 +631,7 @@ openssl_ptr<X509_NAME, X509_NAME_free> generateX509Name(
                                                 X509_NAME_free);
     if (!name)
         return {nullptr, X509_NAME_free};
+    // NOLINTBEGIN(cppcoreguidelines-pro-type-cstyle-cast)
     X509_NAME_add_entry_by_txt(name.get(), "C", MBSTRING_ASC,
                                (const unsigned char*)"US", -1, -1, 0);
     X509_NAME_add_entry_by_txt(name.get(), "ST", MBSTRING_ASC,
@@ -625,6 +645,7 @@ openssl_ptr<X509_NAME, X509_NAME_free> generateX509Name(
     X509_NAME_add_entry_by_txt(name.get(), "CN", MBSTRING_ASC,
                                (const unsigned char*)common_name.data(), -1, -1,
                                0);
+    // NOLINTEND(cppcoreguidelines-pro-type-cstyle-cast)
 
     return name;
 }
@@ -734,7 +755,7 @@ inline openssl_ptr<X509, X509_free> create_certificate(
 
     // Set notAfter to current time + days_valid
     X509_gmtime_adj(X509_get_notAfter(cert.get()),
-                    60L * 60L * 24L * (long)days_valid);
+                    60L * 60L * 24L * static_cast<long>(days_valid));
     X509_set_pubkey(cert.get(), subject_key);
     X509_set_subject_name(cert.get(), subject_name);
     X509_set_issuer_name(cert.get(), issuer_name);
@@ -742,7 +763,8 @@ inline openssl_ptr<X509, X509_free> create_certificate(
     X509_set_version(cert.get(), 2); // Set certificate version to v3
 
     // Add basicConstraints
-    X509_EXTENSION* ext;
+    X509_EXTENSION* ext = nullptr;
+    // NOLINTBEGIN(cppcoreguidelines-pro-type-cstyle-cast)
     ext = X509V3_EXT_conf_nid(nullptr, nullptr, NID_basic_constraints,
                               is_ca ? (char*)"CA:TRUE" : (char*)"CA:FALSE");
     X509_add_ext(cert.get(), ext, -1);
@@ -761,6 +783,7 @@ inline openssl_ptr<X509, X509_free> create_certificate(
                                   (char*)"digitalSignature,"
                                          " keyEncipherment");
     }
+    // NOLINTEND(cppcoreguidelines-pro-type-cstyle-cast)
     X509_add_ext(cert.get(), ext, -1);
     X509_EXTENSION_free(ext);
 
@@ -968,7 +991,7 @@ bool saveBio(const std::string& path, const openssl_ptr<BIO, BIO_free_all>& bio)
         LOG_ERROR("Failed to open file {} for writing", path);
         return false;
     }
-    BUF_MEM* buf;
+    BUF_MEM* buf = nullptr;
     BIO_get_mem_ptr(bio.get(), &buf);
     file.write(buf->data, static_cast<std::streamsize>(buf->length));
     file.close();
@@ -1132,7 +1155,7 @@ std::string toString(const openssl_ptr<X509, X509_free>& cert, bool pem = true)
         return {};
     }
 
-    BUF_MEM* buf;
+    BUF_MEM* buf = nullptr;
     BIO_get_mem_ptr(bio.get(), &buf);
     return std::string(buf->data, buf->length);
 }
@@ -1145,7 +1168,7 @@ std::string toString(const openssl_ptr<EVP_PKEY, EVP_PKEY_free>& pkey,
         LOG_ERROR("Failed to load private key into BIO");
         return {};
     }
-    BUF_MEM* buf;
+    BUF_MEM* buf = nullptr;
     BIO_get_mem_ptr(bio.get(), &buf);
     return std::string(buf->data, buf->length);
 }
@@ -1183,7 +1206,7 @@ std::string getPublicKeyStringFromCert(X509Ptr signcert)
         return {};
     }
 
-    BUF_MEM* buf;
+    BUF_MEM* buf = nullptr;
     BIO_get_mem_ptr(bio.get(), &buf);
     return std::string(buf->data, buf->length);
 }

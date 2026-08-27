@@ -16,6 +16,10 @@ class TaskQueue
         Client(net::any_io_executor ioContext, net::ssl::context& sslContext) :
             client(ioContext, sslContext)
         {}
+        Client(const Client&) = delete;
+        Client& operator=(const Client&) = delete;
+        Client(Client&&) = delete;
+        Client& operator=(Client&&) = delete;
         ~Client()
         {
             // client.close();
@@ -57,7 +61,7 @@ class TaskQueue
     {
         std::string url;
         std::string port;
-        operator bool() const
+        explicit operator bool() const
         {
             return !url.empty();
         }
@@ -249,6 +253,7 @@ class TaskQueue
         }
         co_return std::nullopt;
     }
+    // NOLINTNEXTLINE(cppcoreguidelines-avoid-reference-coroutine-parameters)
     net::awaitable<boost::system::error_code> tryConnect(TcpClient& client)
     {
         net::steady_timer timer(ioContext);

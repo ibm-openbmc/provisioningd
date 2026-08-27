@@ -44,7 +44,7 @@ struct BmcPairingManagerObject : Ifaces
     static constexpr auto interface = BmcPairingIface::interface;
 
     BmcPairingManagerObject() = delete;
-    ~BmcPairingManagerObject() = default;
+    ~BmcPairingManagerObject() override = default;
     BmcPairingManagerObject(const BmcPairingManagerObject&) = delete;
     BmcPairingManagerObject& operator=(const BmcPairingManagerObject&) = delete;
     BmcPairingManagerObject(BmcPairingManagerObject&&) = delete;

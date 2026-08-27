@@ -211,6 +211,9 @@ struct CertificateExchanger
     }
     CertificateExchanger(const CertificateExchanger&) = delete;
     CertificateExchanger& operator=(const CertificateExchanger&) = delete;
+    CertificateExchanger(CertificateExchanger&&) = delete;
+    CertificateExchanger& operator=(CertificateExchanger&&) = delete;
+    ~CertificateExchanger() = default;
 
     net::awaitable<bool> exchange(Streamer streamer)
     {
@@ -286,11 +289,11 @@ struct CertificateExchanger
     }
     bool installCertificates(const std::string& castr)
     {
+        openssl_ptr<BIO, BIO_free_all> bio(
+            BIO_new_mem_buf(castr.data(), static_cast<int>(castr.size())),
+            BIO_free_all);
         openssl_ptr<X509, X509_free> ca(
-            PEM_read_bio_X509(
-                BIO_new_mem_buf(castr.data(), static_cast<int>(castr.size())),
-                nullptr, nullptr, nullptr),
-            X509_free);
+            PEM_read_bio_X509(bio.get(), nullptr, nullptr, nullptr), X509_free);
 
         if (!saveCertificate(CA_PATH(), ca))
         {
@@ -403,6 +406,7 @@ struct CertificateExchanger
         LOG_ERROR("Unexpected event ID: {}", id);
         co_return false;
     }
+    // NOLINTNEXTLINE(cppcoreguidelines-avoid-reference-coroutine-parameters)
     net::awaitable<bool> sendInstallStatus(Streamer& streamer, bool status)
     {
         nlohmann::json jsonBody;

@@ -7,12 +7,14 @@
 #include <string>
 namespace NSNAME
 {
+// NOLINTNEXTLINE(cppcoreguidelines-avoid-c-arrays)
 inline auto parseCommandline(int argc, const char* argv[])
 {
     int i = 1;
     std::map<std::string_view, std::string_view> comline;
     while (argc >= 3)
     {
+        // NOLINTNEXTLINE(cppcoreguidelines-pro-bounds-pointer-arithmetic)
         comline[argv[i]] = argv[i + 1];
         i += 2;
         argc -= 2;

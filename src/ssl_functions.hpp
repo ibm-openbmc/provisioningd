@@ -42,23 +42,23 @@ inline bool sslVerifyCallback(bool preverified,
     int depth = X509_STORE_CTX_get_error_depth(store_ctx);
 
     X509* cert = X509_STORE_CTX_get_current_cert(store_ctx);
-    char subject[256] = {};
+    std::array<char, 256> subject{};
     if (cert != nullptr)
     {
-        X509_NAME_oneline(X509_get_subject_name(cert), subject,
-                          sizeof(subject));
+        X509_NAME_oneline(X509_get_subject_name(cert), subject.data(),
+                          static_cast<int>(subject.size()));
     }
 
     if (!preverified)
     {
         LOG_ERROR(
             "SSL certificate verification failed: depth={}, error={} ({}), subject={}",
-            depth, err, X509_verify_cert_error_string(err), subject);
+            depth, err, X509_verify_cert_error_string(err), subject.data());
     }
     else
     {
         LOG_DEBUG("SSL certificate verification ok: depth={}, subject={}",
-                  depth, subject);
+                  depth, subject.data());
     }
     return preverified;
 }

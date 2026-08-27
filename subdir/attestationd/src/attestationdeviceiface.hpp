@@ -21,6 +21,10 @@ struct AttestationDeviceIface
         "/xyz/openbmc_project/attestation_requester/devices/tcp/{}";
     static constexpr auto interface = "xyz.openbmc_project.AttestationDevice";
     static constexpr auto signalName = "Attested";
+    AttestationDeviceIface(const AttestationDeviceIface&) = delete;
+    AttestationDeviceIface& operator=(const AttestationDeviceIface&) = delete;
+    AttestationDeviceIface(AttestationDeviceIface&&) = delete;
+    AttestationDeviceIface& operator=(AttestationDeviceIface&&) = delete;
     AttestationDeviceIface(
         const std::shared_ptr<sdbusplus::asio::connection>& conn,
         sdbusplus::asio::object_server& dbusServer, const ResponderInfo& rInfo,

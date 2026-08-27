@@ -124,11 +124,11 @@ using InterfaceMap = std::map<std::string, PropertyMap>;
  * }
  * @endcode
  */
+// NOLINTBEGIN(cppcoreguidelines-avoid-reference-coroutine-parameters)
 template <typename... RetTypes, typename... InputArgs>
 inline auto awaitable_dbus_method_call(
-    sdbusplus::asio::connection& bus, const std::string& service,
-    const std::string& objpath, const std::string& interf,
-    const std::string& method, const InputArgs&... a)
+    sdbusplus::asio::connection& bus, std::string service, std::string objpath,
+    std::string interf, std::string method, const InputArgs&... a)
     -> AwaitableResult<RetTypes...>
 {
     auto h = make_awaitable_handler<RetTypes...>([&](auto promise) {
@@ -179,10 +179,10 @@ inline auto awaitable_dbus_method_call(
  */
 template <typename... InputArgs>
 inline AwaitableResult<boost::system::error_code>
-    awaitable_dbus_method_call_void(
-        sdbusplus::asio::connection& bus, const std::string& service,
-        const std::string& objpath, const std::string& interf,
-        const std::string& method, const InputArgs&... a)
+    awaitable_dbus_method_call_void(sdbusplus::asio::connection& bus,
+                                    std::string service, std::string objpath,
+                                    std::string interf, std::string method,
+                                    const InputArgs&... a)
 {
     auto [ec, msg] = co_await awaitable_dbus_method_call<sdbusplus::message_t>(
         bus, service, objpath, interf, method, a...);
@@ -218,9 +218,8 @@ inline AwaitableResult<boost::system::error_code>
  */
 template <typename Type>
 inline AwaitableResult<Type> getProperty(
-    sdbusplus::asio::connection& bus, const std::string& service,
-    const std::string& objpath, const std::string& interf,
-    const std::string& property)
+    sdbusplus::asio::connection& bus, std::string service, std::string objpath,
+    std::string interf, std::string property)
 {
     auto [ec, value] =
         co_await awaitable_dbus_method_call<std::variant<std::monostate, Type>>(
@@ -268,9 +267,8 @@ inline AwaitableResult<Type> getProperty(
  */
 template <typename InputArgs>
 inline AwaitableResult<boost::system::error_code> setProperty(
-    sdbusplus::asio::connection& bus, const std::string& service,
-    const std::string& objpath, const std::string& interf,
-    const std::string& property, const InputArgs& value)
+    sdbusplus::asio::connection& bus, std::string service, std::string objpath,
+    std::string interf, std::string property, const InputArgs& value)
 {
     auto h =
         make_awaitable_handler<boost::system::error_code>([&](auto promise) {
@@ -310,8 +308,8 @@ inline AwaitableResult<boost::system::error_code> setProperty(
  * @endcode
  */
 inline AwaitableResult<PropertyMap> getAllProperties(
-    sdbusplus::asio::connection& bus, const std::string& service,
-    const std::string& path, const std::string& interface)
+    sdbusplus::asio::connection& bus, std::string service, std::string path,
+    std::string interface)
 {
     co_return co_await awaitable_dbus_method_call<PropertyMap>(
         bus, service, path, dbusPropertiesInterface, "GetAll", interface);
@@ -332,8 +330,7 @@ inline AwaitableResult<PropertyMap> getAllProperties(
  */
 template <typename ReturnType, typename... Args>
 inline AwaitableResult<ReturnType> callObjectMapperMethod(
-    sdbusplus::asio::connection& bus, const std::string& method,
-    const Args&... args)
+    sdbusplus::asio::connection& bus, std::string method, const Args&... args)
 {
     co_return co_await awaitable_dbus_method_call<ReturnType>(
         bus, objectMapperService, objectMapperPath, objectMapperInterface,
@@ -481,11 +478,10 @@ inline AwaitableResult<DictType> getAssociatedSubTreePaths(
  */
 template <typename DictType>
 inline AwaitableResult<DictType> getAssociatedSubTreeById(
-    sdbusplus::asio::connection& bus, const std::string& id,
-    const std::string& path,
+    sdbusplus::asio::connection& bus, std::string id, std::string path,
     std::span<const std::string_view> subtreeInterfaces,
     std::string_view association,
-    const std::vector<std::string>& endpointInterfaces = {})
+    std::vector<std::string> endpointInterfaces = {})
 {
     co_return co_await awaitable_dbus_method_call<DictType>(
         bus, objectMapperService, objectMapperPath, objectMapperInterface,
@@ -509,11 +505,9 @@ inline AwaitableResult<DictType> getAssociatedSubTreeById(
  */
 template <typename DictType>
 inline AwaitableResult<DictType> getAssociatedSubTreePathsById(
-    sdbusplus::asio::connection& bus, const std::string& id,
-    const std::string& path,
+    sdbusplus::asio::connection& bus, std::string id, std::string path,
     std::span<const std::string_view> subtreeInterfaces,
-    std::string_view association,
-    const std::vector<std::string>& endpointInterfaces)
+    std::string_view association, std::vector<std::string> endpointInterfaces)
 {
     co_return co_await awaitable_dbus_method_call<DictType>(
         bus, objectMapperService, objectMapperPath, objectMapperInterface,
@@ -534,8 +528,8 @@ inline AwaitableResult<DictType> getAssociatedSubTreePathsById(
  */
 template <typename DictType>
 inline AwaitableResult<DictType> getDbusObject(
-    sdbusplus::asio::connection& bus, const std::string& path,
-    const std::vector<std::string>& interfaces = {})
+    sdbusplus::asio::connection& bus, std::string path,
+    std::vector<std::string> interfaces = {})
 {
     co_return co_await awaitable_dbus_method_call<DictType>(
         bus, objectMapperService, objectMapperPath, objectMapperInterface,
@@ -554,7 +548,7 @@ inline AwaitableResult<DictType> getDbusObject(
  */
 template <typename DictType>
 inline AwaitableResult<DictType> getAssociationEndPoints(
-    sdbusplus::asio::connection& bus, const std::string& path)
+    sdbusplus::asio::connection& bus, std::string path)
 {
     co_return co_await getProperty<DictType>(bus, objectMapperService, path,
                                              associationInterface, "endpoints");
@@ -583,8 +577,8 @@ inline AwaitableResult<DictType> getAssociationEndPoints(
  */
 template <typename DictType>
 inline AwaitableResult<DictType> getManagedObjects(
-    sdbusplus::asio::connection& bus, const std::string& service,
-    const sdbuscompat::object_path& path)
+    sdbusplus::asio::connection& bus, std::string service,
+    sdbuscompat::object_path path)
 {
     co_return co_await awaitable_dbus_method_call<DictType>(
         bus, service, path, dbusObjectManagerInterface, "GetManagedObjects");
@@ -602,8 +596,8 @@ inline AwaitableResult<DictType> getManagedObjects(
  */
 template <typename DictType>
 inline AwaitableResult<DictType> getAncestors(
-    sdbusplus::asio::connection& bus, const std::string& path,
-    const std::vector<std::string>& interfaces = {})
+    sdbusplus::asio::connection& bus, std::string path,
+    std::vector<std::string> interfaces = {})
 {
     co_return co_await awaitable_dbus_method_call<DictType>(
         bus, objectMapperService, objectMapperPath, objectMapperInterface,
@@ -621,10 +615,11 @@ inline AwaitableResult<DictType> getAncestors(
  * @return AwaitableResult<std::string> Tuple of [error_code,
  * xml_introspection_data]
  */
-inline AwaitableResult<std::string> introspect(
-    sdbusplus::asio::connection& bus, const std::string& service,
-    const sdbuscompat::object_path& path)
+inline AwaitableResult<std::string> introspect(sdbusplus::asio::connection& bus,
+                                               std::string service,
+                                               sdbuscompat::object_path path)
 {
+    // NOLINTNEXTLINE(clang-analyzer-core.NullDereference)
     co_return co_await awaitable_dbus_method_call<std::string>(
         bus, service, path, dbusIntrospectableInterface, "Introspect");
 }
@@ -660,14 +655,14 @@ T getDefaultValue()
  */
 template <typename T>
 T getPropertyFromMap(boost::system::error_code& ec, const PropertyMap& propMap,
-                     const std::string& argname)
+                     std::string_view argname)
 {
     if (ec)
     {
         LOG_ERROR("Already failed for previous properties in map retrieval");
         return getDefaultValue<T>();
     }
-    auto iter = propMap.find(argname);
+    auto iter = propMap.find(std::string(argname));
     if (iter == propMap.end())
     {
         LOG_ERROR("Failed to find property {}", argname);
@@ -704,10 +699,12 @@ inline std::tuple<ArgTypes...> getPropertiesFromMapImpl(
     std::tuple<ArgTypes...> result{};
     // Fold over indices left-to-right; once ec is set the per-property
     // function returns the default value immediately (see getPropertyFromMap).
+    // NOLINTBEGIN(cppcoreguidelines-pro-bounds-array-to-pointer-decay)
     ((std::get<I>(result) =
           getPropertyFromMap<std::tuple_element_t<I, std::tuple<ArgTypes...>>>(
               ec, propMap, std::get<I>(std::forward_as_tuple(args...)))),
      ...);
+    // NOLINTEND(cppcoreguidelines-pro-bounds-array-to-pointer-decay)
     return result;
 }
 
@@ -741,4 +738,5 @@ inline std::tuple<boost::system::error_code, ArgTypes...> getPropertiesFromMap(
         ec, propMap, std::index_sequence_for<ArgTypes...>{}, args...);
     return std::tuple_cat(std::make_tuple(ec), t);
 }
+// NOLINTEND(cppcoreguidelines-avoid-reference-coroutine-parameters)
 } // namespace NSNAME

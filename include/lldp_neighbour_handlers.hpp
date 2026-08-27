@@ -37,8 +37,9 @@ template <typename Handler>
 auto makeNeighbourDiscoveryHandler(Handler handler,
                                    std::function<void()> fallback = {})
 {
+    // NOLINTBEGIN(cppcoreguidelines-avoid-capturing-lambda-coroutines,cppcoreguidelines-avoid-reference-coroutine-parameters)
     return [handler = std::move(handler), fallback = std::move(fallback)](
-               const boost::system::error_code& /*ec*/,
+               boost::system::error_code /*ec*/,
                std::optional<sdbusplus::message_t> m) -> net::awaitable<void> {
         if (!m)
         {
@@ -78,6 +79,7 @@ auto makeNeighbourDiscoveryHandler(Handler handler,
         co_await handler(address, name);
         co_return;
     };
+    // NOLINTEND(cppcoreguidelines-avoid-capturing-lambda-coroutines,cppcoreguidelines-avoid-reference-coroutine-parameters)
 }
 
 /**
@@ -100,6 +102,7 @@ auto makeNeighbourUpdateHandler(
     std::shared_ptr<sdbusplus::asio::connection> conn,
     const std::string& ifaceName, Handler handler)
 {
+    // NOLINTBEGIN(cppcoreguidelines-avoid-capturing-lambda-coroutines)
     return [handler = std::move(handler), conn,
             ifaceName]() -> net::awaitable<void> {
         auto [ec, properties] = co_await reactor::getAllProperties(
@@ -125,4 +128,5 @@ auto makeNeighbourUpdateHandler(
         co_await handler(address, name);
         co_return;
     };
+    // NOLINTEND(cppcoreguidelines-avoid-capturing-lambda-coroutines)
 }
