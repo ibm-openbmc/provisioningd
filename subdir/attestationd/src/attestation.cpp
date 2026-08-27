@@ -222,8 +222,8 @@ int main(int argc, const char* argv[])
             loadClientContext(clientcert, clientprivkey, caCert, self_signed);
         auto serverCtx =
             loadServerContext(servercert, serverprivkey, caCert, self_signed);
-        TcpStreamType acceptor(io_context.get_executor(), myip, port,
-                               serverCtx);
+        TcpStreamType acceptor(io_context.get_executor(), myip,
+                               static_cast<short>(port), serverCtx);
         EventQueue eventQueue(io_context.get_executor(), acceptor,
                               ssl_client_context, maxConnections);
         auto conn = std::make_shared<sdbusplus::asio::connection>(io_context);

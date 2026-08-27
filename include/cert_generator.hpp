@@ -970,7 +970,7 @@ bool saveBio(const std::string& path, const openssl_ptr<BIO, BIO_free_all>& bio)
     }
     BUF_MEM* buf;
     BIO_get_mem_ptr(bio.get(), &buf);
-    file.write(buf->data, buf->length);
+    file.write(buf->data, static_cast<std::streamsize>(buf->length));
     file.close();
     LOG_DEBUG("BIO data saved to {}", path);
     return true;
@@ -1014,8 +1014,8 @@ openssl_ptr<X509, X509_free> loadCertificate(
         return makeX509Ptr(nullptr);
     }
 
-    auto certbio =
-        makeBIOPtr(BIO_new_mem_buf(certData.data(), certData.size()));
+    auto certbio = makeBIOPtr(
+        BIO_new_mem_buf(certData.data(), static_cast<int>(certData.size())));
     if (!certbio)
     {
         LOG_ERROR("Failed to create BIO from certificate data");

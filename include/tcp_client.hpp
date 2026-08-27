@@ -46,9 +46,16 @@ class TcpClient
                                                            ssl_context)),
         timer_(std::make_shared<net::steady_timer>(io_context))
     {}
-    ~TcpClient()
+    ~TcpClient() noexcept
     {
-        timer_->cancel();
+        try
+        {
+            timer_->cancel();
+        }
+        catch (const std::exception& e)
+        {
+            LOG_ERROR("Exception in TcpClient destructor: {}", e.what());
+        }
     }
 
     net::awaitable<boost::system::error_code> connect(const std::string& host,
@@ -107,10 +114,10 @@ class TcpClient
     {
         return TimedStreamer(stream_, timer_);
     }
-    void close()
+    void close() noexcept
     {
         boost::system::error_code ec;
-        stream_->next_layer().close(ec);
+        stream_->next_layer().close(ec); // NOLINT(bugprone-unused-return-value)
         if (ec)
         {
             LOG_ERROR("Error closing socket: {}", ec.message());

@@ -287,8 +287,9 @@ struct CertificateExchanger
     bool installCertificates(const std::string& castr)
     {
         openssl_ptr<X509, X509_free> ca(
-            PEM_read_bio_X509(BIO_new_mem_buf(castr.data(), castr.size()),
-                              nullptr, nullptr, nullptr),
+            PEM_read_bio_X509(
+                BIO_new_mem_buf(castr.data(), static_cast<int>(castr.size())),
+                nullptr, nullptr, nullptr),
             X509_free);
 
         if (!saveCertificate(CA_PATH(), ca))
