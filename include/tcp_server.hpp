@@ -19,9 +19,16 @@ class TcpServer
     {
         start_accept();
     }
-    ~TcpServer()
+    ~TcpServer() noexcept
     {
-        acceptor.cancel();
+        try
+        {
+            acceptor.cancel();
+        }
+        catch (const std::exception& e)
+        {
+            LOG_ERROR("Exception in TcpServer destructor: {}", e.what());
+        }
     }
     auto getLocalEndpoint() const
     {

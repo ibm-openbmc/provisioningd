@@ -84,8 +84,8 @@ struct TcpStreamType
         auto socket = std::make_shared<stream_type>(context, ssl_context_);
         acceptor_.async_accept(
             socket->lowest_layer(),
-            [this, socket,
-             handler = std::move(handler)](boost::system::error_code ec) {
+            [this, socket, handler = std::forward<Handler>(handler)](
+                boost::system::error_code ec) {
                 if (!ec)
                 {
                     configureSocketKeepalive(socket->lowest_layer());
@@ -126,14 +126,15 @@ struct UnixStreamType
     void accept(Handler&& handler)
     {
         auto socket = std::make_shared<stream_type>(context, ssl_context_);
-        acceptor_.async_accept(socket->lowest_layer(),
-                               [this, socket, handler = std::move(handler)](
-                                   boost::system::error_code ec) {
-                                   if (!ec)
-                                   {
-                                       handler(std::move(socket));
-                                   }
-                               });
+        acceptor_.async_accept(
+            socket->lowest_layer(),
+            [this, socket, handler = std::forward<Handler>(handler)](
+                boost::system::error_code ec) {
+                if (!ec)
+                {
+                    handler(std::move(socket));
+                }
+            });
     }
     auto getRemoteEndpoint(stream_type& /*socket*/)
     {

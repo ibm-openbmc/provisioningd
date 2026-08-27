@@ -8,6 +8,7 @@
 #include <format>
 #include <fstream>
 #include <random>
+#include <tuple>
 #include <utility>
 
 namespace NSNAME
@@ -426,10 +427,10 @@ class Tpm2CertManager
         }
         else
         {
-            result =
-                PEM_write_PrivateKey(fp.get(), key.get(), EVP_aes_256_cbc(),
-                                     (unsigned char*)password.c_str(),
-                                     password.length(), NULL, NULL);
+            result = PEM_write_PrivateKey(
+                fp.get(), key.get(), EVP_aes_256_cbc(),
+                (unsigned char*)password.c_str(),
+                static_cast<int>(password.length()), NULL, NULL);
         }
 
         if (result != 1)
@@ -591,7 +592,8 @@ class Tpm2CertManager
         // Step 1: Remove any existing key at this handle (ignore errors if none
         // exists)
         LOG_DEBUG("Removing any existing key at handle {}", persistentHandle);
-        executeTPMCommand(TPM2_EVICT_REMOVE_CMD, persistentHandle);
+        std::ignore =
+            executeTPMCommand(TPM2_EVICT_REMOVE_CMD, persistentHandle);
         // Ignore error - it's OK if no key exists at this handle
 
         // Step 2: Load key
@@ -663,7 +665,6 @@ class Tpm2CertManager
         std::uniform_int_distribution<uint64_t> dis;
         uint64_t serial = dis(gen);
 
-        std::string cmd;
         if (!extensions.empty())
         {
             // Create a temporary config file for extensions
@@ -730,7 +731,6 @@ class Tpm2CertManager
         std::uniform_int_distribution<uint64_t> dis;
         uint64_t serial = dis(gen);
 
-        std::string cmd;
         if (!extensions.empty())
         {
             // Create a temporary config file for extensions
@@ -1250,7 +1250,7 @@ class Tpm2CertManager
             else
             {
                 // SSL_CTX_add_extra_chain_cert takes ownership, so release it
-                serverCaCert.release();
+                std::ignore = serverCaCert.release();
                 LOG_DEBUG(
                     "Added server CA certificate to server certificate chain");
             }
@@ -1392,7 +1392,7 @@ class Tpm2CertManager
             else
             {
                 // SSL_CTX_add_extra_chain_cert takes ownership, so release it
-                clientCaCert.release();
+                std::ignore = clientCaCert.release();
                 LOG_DEBUG(
                     "Added client CA certificate to client certificate chain");
             }

@@ -163,21 +163,22 @@ void invoke_handler_with_promise(Handler&& handler, HandlerFunc&& h)
     if constexpr (StartsWithErrorCode<Ret...>)
     {
         // error_code already present - use Ret... as-is
-        PromiseType<decltype(handler), Ret...> promise{std::move(handler)};
+        PromiseType<decltype(handler), Ret...> promise{
+            std::forward<Handler>(handler)};
         h(std::move(promise));
     }
     else
     {
         // error_code not present - prepend it to Ret...
         PromiseType<decltype(handler), boost::system::error_code, Ret...>
-            promise{std::move(handler)};
+            promise{std::forward<Handler>(handler)};
         h(std::move(promise));
     }
 }
 template <typename... Ret, typename HandlerFunc>
 auto make_awaitable_handler(HandlerFunc&& h)
 {
-    return [h = std::move(h)]() -> AwaitableResult<Ret...> {
+    return [h = std::forward<HandlerFunc>(h)]() -> AwaitableResult<Ret...> {
         co_return co_await net::async_initiate<
             const net::use_awaitable_t<>,
             ReturnTuple<Ret...>(ReturnTuple<Ret...>)>(

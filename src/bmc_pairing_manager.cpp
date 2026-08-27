@@ -255,7 +255,7 @@ net::awaitable<void> onSpdmStateChange(
     std::shared_ptr<BmcResponder>& bmcResponder,
     const boost::system::error_code& ec, std::optional<bool> val)
 {
-    if (ec)
+    if (ec || !val)
     {
         co_return;
     }
