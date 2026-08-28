@@ -19,6 +19,10 @@ class TcpServer
     {
         start_accept();
     }
+    TcpServer(const TcpServer&) = delete;
+    TcpServer& operator=(const TcpServer&) = delete;
+    TcpServer(TcpServer&&) = delete;
+    TcpServer& operator=(TcpServer&&) = delete;
     ~TcpServer() noexcept
     {
         try

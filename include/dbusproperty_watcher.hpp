@@ -28,7 +28,8 @@ struct DbusWatcher : std::enable_shared_from_this<Derived>
     DbusWatcher& operator=(const DbusWatcher&) = delete;
     DbusWatcher(DbusWatcher&&) = delete;
     DbusWatcher& operator=(DbusWatcher&&) = delete;
-    DbusWatcher(std::shared_ptr<sdbusplus::asio::connection> conn) : conn(conn)
+    explicit DbusWatcher(std::shared_ptr<sdbusplus::asio::connection> conn) :
+        conn(conn)
     {}
     ~DbusWatcher()
     {
@@ -111,12 +112,13 @@ struct DbusWatcher : std::enable_shared_from_this<Derived>
                       WatchHandler<PropType> auto callback, Args... args)
     {
         auto watcher = Derived::create(conn, args...);
+        // NOLINTBEGIN(cppcoreguidelines-avoid-capturing-lambda-coroutines,cppcoreguidelines-avoid-reference-coroutine-parameters)
         net::co_spawn(
             ctx,
             [&ctx, watcher,
              callback = std::move(callback)]() -> net::awaitable<void> {
                 co_await watcher->watch([&ctx, callback = std::move(callback)](
-                                            const boost::system::error_code& ec,
+                                            boost::system::error_code ec,
                                             std::optional<PropType> val)
                                             -> net::awaitable<void> {
                     net::co_spawn(
@@ -132,6 +134,7 @@ struct DbusWatcher : std::enable_shared_from_this<Derived>
                 });
             },
             net::detached);
+        // NOLINTEND(cppcoreguidelines-avoid-capturing-lambda-coroutines,cppcoreguidelines-avoid-reference-coroutine-parameters)
     }
     auto makeWatchHandler()
     {
@@ -332,11 +335,9 @@ struct DbusSignalWatcher : public DbusWatcher<DbusSignalWatcher<TYPE>, TYPE>
     }
     DbusSignalWatcher(PrivateTag,
                       std::shared_ptr<sdbusplus::asio::connection> conn,
-                      const std::string& matchRule) : BASE(conn)
-
-    {
-        signalMatchRule = matchRule;
-    }
+                      const std::string& matchRule) :
+        BASE(conn), signalMatchRule(matchRule)
+    {}
     DbusSignalWatcher(PrivateTag,
                       std::shared_ptr<sdbusplus::asio::connection> conn) :
         BASE(conn)

@@ -179,10 +179,12 @@ class I2CClient
         }
 
         // Open the I2C device file
+        // NOLINTNEXTLINE(cppcoreguidelines-pro-type-vararg)
         int fd = ::open(devicePath_.c_str(), O_RDWR | O_NONBLOCK);
         if (fd == -1)
         {
             int err = errno;
+            // NOLINTNEXTLINE(concurrency-mt-unsafe)
             LOG_ERROR("Failed to open I2C device {}: {} (errno: {})",
                       devicePath_, std::strerror(err), err);
             if (err == EACCES || err == EPERM)
@@ -199,9 +201,11 @@ class I2CClient
         fd_.reset(fd);
 
         // Set the I2C slave address
+        // NOLINTNEXTLINE(cppcoreguidelines-pro-type-vararg)
         if (::ioctl(fd_.get(), I2C_SLAVE, slaveAddress_) == -1)
         {
             int err = errno;
+            // NOLINTNEXTLINE(concurrency-mt-unsafe)
             LOG_ERROR("Failed to set I2C slave address 0x{:02X} on {}: {} "
                       "(errno: {})",
                       slaveAddress_, devicePath_, std::strerror(err), err);
@@ -299,6 +303,7 @@ class I2CClient
     /**
      * @brief Write data to the I2C device (vector overload)
      */
+    // NOLINTNEXTLINE(cppcoreguidelines-avoid-reference-coroutine-parameters)
     net::awaitable<I2CResult<size_t>> write(const std::vector<uint8_t>& data)
     {
         co_return co_await write(std::span<const uint8_t>(data));
@@ -482,9 +487,10 @@ class I2CClient
      */
     template <typename T>
         requires std::is_trivially_copyable_v<T>
+    // NOLINTNEXTLINE(cppcoreguidelines-avoid-reference-coroutine-parameters)
     net::awaitable<I2CResult<size_t>> writeTyped(const T& value)
     {
-        std::array<uint8_t, sizeof(T)> buffer;
+        std::array<uint8_t, sizeof(T)> buffer{};
         std::memcpy(buffer.data(), &value, sizeof(T));
         co_return co_await write(std::span<const uint8_t>(buffer));
     }
@@ -535,10 +541,12 @@ class I2CClient
      * @return Number of bytes written on success, error code otherwise
      */
     template <typename T>
+    // NOLINTNEXTLINE(cppcoreguidelines-avoid-reference-coroutine-parameters)
     net::awaitable<I2CResult<size_t>> writeRegister(uint8_t reg, const T& value)
     {
         std::vector<uint8_t> buffer(1 + sizeof(T));
         buffer[0] = reg;
+        // NOLINTNEXTLINE(cppcoreguidelines-pro-bounds-pointer-arithmetic)
         std::memcpy(buffer.data() + 1, &value, sizeof(T));
         co_return co_await write(buffer);
     }
@@ -587,12 +595,15 @@ class I2CClient
      */
     template <typename T>
         requires std::is_trivially_copyable_v<T>
+    // NOLINTBEGIN(cppcoreguidelines-avoid-reference-coroutine-parameters)
     net::awaitable<I2CResult<size_t>> writeEEPROM(uint16_t offset,
                                                   const T& data)
+    // NOLINTEND(cppcoreguidelines-avoid-reference-coroutine-parameters)
     {
         std::vector<uint8_t> buffer(2 + sizeof(T));
         buffer[0] = static_cast<uint8_t>(offset >> 8);
         buffer[1] = static_cast<uint8_t>(offset & 0xFF);
+        // NOLINTNEXTLINE(cppcoreguidelines-pro-bounds-pointer-arithmetic)
         std::memcpy(buffer.data() + 2, &data, sizeof(T));
 
         co_return co_await write(buffer);
@@ -620,6 +631,7 @@ class I2CClient
      */
     template <typename T>
         requires std::is_trivially_copyable_v<T>
+    // NOLINTNEXTLINE(cppcoreguidelines-avoid-reference-coroutine-parameters)
     net::awaitable<I2CResult<size_t>> writeVPD(uint16_t offset, const T& data)
     {
         co_return co_await writeEEPROM<T>(offset, data);

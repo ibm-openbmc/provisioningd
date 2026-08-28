@@ -79,7 +79,7 @@ bool verifyExecutableMeasurement(const std::string& exePath,
         std::istringstream iss(std::string(hex, 2));
         iss >> std::hex >> byte;
         b = static_cast<unsigned char>(byte);
-        hex += 2;
+        hex += 2; // NOLINT(cppcoreguidelines-pro-bounds-pointer-arithmetic)
     }
 
     // Use EVP_DigestVerify* APIs to verify the signature
@@ -108,7 +108,7 @@ bool verifyExecutableMeasurement(const std::string& exePath,
 struct MeasurementTaker
 {
     EVP_PKEYPtr privkey;
-    MeasurementTaker(EVP_PKEYPtr pKey) : privkey(std::move(pKey)) {}
+    explicit MeasurementTaker(EVP_PKEYPtr pKey) : privkey(std::move(pKey)) {}
     std::string operator()(const std::string& exePath)
     {
         return getExecutableMeasurement(exePath, privkey);
@@ -117,7 +117,7 @@ struct MeasurementTaker
 struct MeasurementVerifier
 {
     EVP_PKEYPtr pubkey;
-    MeasurementVerifier(EVP_PKEYPtr pKey) : pubkey(std::move(pKey)) {}
+    explicit MeasurementVerifier(EVP_PKEYPtr pKey) : pubkey(std::move(pKey)) {}
     bool operator()(const std::string& exePath, const std::string& measurement)
     {
         return verifyExecutableMeasurement(exePath, pubkey, measurement);

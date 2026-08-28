@@ -60,15 +60,18 @@ struct AttestationHandler
     }
     AttestationHandler(const AttestationHandler&) = delete;
     AttestationHandler& operator=(const AttestationHandler&) = delete;
-    AttestationHandler(AttestationHandler&& o) = delete;
+    AttestationHandler(AttestationHandler&&) = delete;
+    AttestationHandler& operator=(AttestationHandler&&) = delete;
+    ~AttestationHandler() = default;
     AttestationHandler& addToMeasure(const std::string& exePath)
     {
         toMeasure.push_back(exePath);
         return *this;
     }
 
+    // NOLINTNEXTLINE(cppcoreguidelines-avoid-reference-coroutine-parameters)
     net::awaitable<boost::system::error_code> attestationBeginConsumer(
-        Streamer streamer, const std::string& eventReplay)
+        Streamer streamer, std::string eventReplay)
     {
         LOG_DEBUG("Received event: {}", eventReplay);
         auto [id, body] = parseEvent(eventReplay);
@@ -111,8 +114,9 @@ struct AttestationHandler
             co_return boost::system::error_code{};
         }
     }
+    // NOLINTNEXTLINE(cppcoreguidelines-avoid-reference-coroutine-parameters)
     net::awaitable<boost::system::error_code> attestationBeginHandler(
-        Streamer streamer, const std::string& event)
+        Streamer streamer, std::string event)
     {
         LOG_DEBUG("Received event: {}", event);
         auto [id, body] = parseEvent(event);
@@ -135,8 +139,9 @@ struct AttestationHandler
         LOG_ERROR("Failed to start Attestation measurement: {}", event);
         co_return boost::system::error_code{};
     }
-    net::awaitable<bool> processMeasurementRequest(
-        Streamer streamer, const std::string& eventReplay)
+    // NOLINTNEXTLINE(cppcoreguidelines-avoid-reference-coroutine-parameters)
+    net::awaitable<bool> processMeasurementRequest(Streamer streamer,
+                                                   std::string eventReplay)
     {
         std::string event = eventReplay;
         auto [id, body] = parseEvent(event);

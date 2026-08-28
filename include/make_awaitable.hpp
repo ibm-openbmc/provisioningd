@@ -178,6 +178,7 @@ void invoke_handler_with_promise(Handler&& handler, HandlerFunc&& h)
 template <typename... Ret, typename HandlerFunc>
 auto make_awaitable_handler(HandlerFunc&& h)
 {
+    // NOLINTNEXTLINE(cppcoreguidelines-avoid-capturing-lambda-coroutines)
     return [h = std::forward<HandlerFunc>(h)]() -> AwaitableResult<Ret...> {
         co_return co_await net::async_initiate<
             const net::use_awaitable_t<>,

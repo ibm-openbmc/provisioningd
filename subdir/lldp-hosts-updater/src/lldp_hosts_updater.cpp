@@ -26,8 +26,8 @@ static constexpr auto DEFAULT_IFACE = "eth2";
  * Updates /etc/hosts with the new IP → bmc.peer mapping and continues
  * watching so future address changes are also applied.
  */
-static net::awaitable<void> onNeighbourFound(const std::string& address,
-                                             const std::string& /*name*/)
+static net::awaitable<void> onNeighbourFound(std::string address,
+                                             std::string /*name*/)
 {
     LOG_INFO("LLDP neighbour discovered: {}", address);
     if (!updateEtcHosts(address))
@@ -50,10 +50,10 @@ int main(int argc, const char* argv[])
         net::io_context io_context;
         auto conn = std::make_shared<sdbusplus::asio::connection>(io_context);
 
+        // NOLINTNEXTLINE(cppcoreguidelines-avoid-capturing-lambda-coroutines)
         auto neighbourHandler =
-            [](const std::string& address,
-               const std::string& name) -> net::awaitable<void> {
-            co_await onNeighbourFound(address, name);
+            [](std::string address, std::string name) -> net::awaitable<void> {
+            co_await onNeighbourFound(std::move(address), std::move(name));
         };
 
         auto fallbackHandler =

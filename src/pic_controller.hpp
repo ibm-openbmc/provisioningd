@@ -261,7 +261,7 @@ class I2CStrategy
      * @param i2cBus I2C bus number (default: 3)
      * @param i2cAddress I2C slave address (default: 0x5a)
      */
-    I2CStrategy(int i2cBus = 3, uint16_t i2cAddress = 0x5a) :
+    explicit I2CStrategy(int i2cBus = 3, uint16_t i2cAddress = 0x5a) :
         i2cBus(i2cBus), i2cAddress(i2cAddress),
         i2cDevicePath("/dev/i2c-" + std::to_string(i2cBus))
     {}
@@ -273,6 +273,7 @@ class I2CStrategy
     reactor::net::awaitable<bool> initialize()
     {
         // Get executor from coroutine context
+        // NOLINTNEXTLINE(clang-analyzer-core.CallAndMessage)
         auto executor = co_await reactor::net::this_coro::executor;
 
         // Create I2C client with the executor
@@ -423,7 +424,7 @@ class PicControllerImpl
      * @param i2cBus I2C bus number (default: 3)
      * @param i2cAddress I2C slave address (default: 0x5a)
      */
-    PicControllerImpl(int i2cBus = 3, uint16_t i2cAddress = 0x5a)
+    explicit PicControllerImpl(int i2cBus = 3, uint16_t i2cAddress = 0x5a)
         requires std::same_as<Strategy, I2CStrategy>
         : strategy(i2cBus, i2cAddress)
     {}

@@ -24,6 +24,7 @@
 
 static constexpr auto LLDP_PATH = "/xyz/openbmc_project/network/lldp/{}";
 static constexpr auto LLDP_PROP = "ManagementAddressIPv4";
+// NOLINTNEXTLINE(cppcoreguidelines-avoid-non-const-global-variables)
 std::string prefix;
 ssl::context loadServerContext(const std::string& servercert,
                                const std::string& privKey,
@@ -108,6 +109,7 @@ void intialiseAttestationHandler(
     AttestationHandler& attestationHandler, AttestationDeviceIface& deviceIface,
     AttestationResponderIface& attestationResponder)
 {
+    // NOLINTNEXTLINE(cppcoreguidelines-avoid-capturing-lambda-coroutines)
     attestationHandler.setAttestationFinishHandler([&](bool status, bool resp)
                                                        -> net::awaitable<void> {
         LOG_INFO(
@@ -134,10 +136,10 @@ auto createNeighbourHandler(
     std::shared_ptr<AttestationDeviceIface>& attestationDevice,
     const std::string& remotePort)
 {
+    // NOLINTNEXTLINE(cppcoreguidelines-avoid-capturing-lambda-coroutines)
     return [&io_context, conn, &dbusServer, &attestationHandler,
-            &attestationResponder, &attestationDevice,
-            remotePort](const std::string& address,
-                        const std::string& name) -> net::awaitable<void> {
+            &attestationResponder, &attestationDevice, remotePort](
+               std::string address, std::string name) -> net::awaitable<void> {
         LOG_INFO("Neighbour LLDP Address : {} Name : {} ", address, name);
         std::string sanitizedName = "peer";
         std::replace(sanitizedName.begin(), sanitizedName.end(), '-', '_');

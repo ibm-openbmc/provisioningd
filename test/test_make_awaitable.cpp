@@ -14,6 +14,7 @@
 
 // Define LOG_ERROR stub for testing - must be before including headers
 #ifndef LOG_ERROR
+// NOLINTNEXTLINE(cppcoreguidelines-macro-usage)
 #define LOG_ERROR(...)                                                         \
     do                                                                         \
     {                                                                          \
@@ -165,6 +166,7 @@ TEST_F(MakeAwaitableTest, MakeAwaitableHandlerSingleValue)
 
     net::co_spawn(
         io,
+        // NOLINTNEXTLINE(cppcoreguidelines-avoid-capturing-lambda-coroutines)
         [&]() -> net::awaitable<void> {
             auto handler = make_awaitable_handler<int>([&](auto promise) {
                 promise.setValues(boost::system::error_code{}, expectedValue);
@@ -192,6 +194,7 @@ TEST_F(MakeAwaitableTest, MakeAwaitableHandlerMultipleValues)
 
     net::co_spawn(
         io,
+        // NOLINTNEXTLINE(cppcoreguidelines-avoid-capturing-lambda-coroutines)
         [&]() -> net::awaitable<void> {
             auto handler = make_awaitable_handler<int, std::string, bool>(
                 [](auto promise) {
@@ -223,6 +226,7 @@ TEST_F(MakeAwaitableTest, MakeAwaitableHandlerWithErrorCodeInSignature)
 
     net::co_spawn(
         io,
+        // NOLINTNEXTLINE(cppcoreguidelines-avoid-capturing-lambda-coroutines)
         [&]() -> net::awaitable<void> {
             auto handler =
                 make_awaitable_handler<boost::system::error_code, int>(
@@ -252,6 +256,7 @@ TEST_F(MakeAwaitableTest, MakeAwaitableHandlerWithError)
 
     net::co_spawn(
         io,
+        // NOLINTNEXTLINE(cppcoreguidelines-avoid-capturing-lambda-coroutines)
         [&]() -> net::awaitable<void> {
             auto handler =
                 make_awaitable_handler<std::string>([](auto promise) {
@@ -349,6 +354,7 @@ TEST_F(MakeAwaitableTest, MakeAwaitableHandlerComplexTypes)
 
     net::co_spawn(
         io,
+        // NOLINTNEXTLINE(cppcoreguidelines-avoid-capturing-lambda-coroutines)
         [&]() -> net::awaitable<void> {
             auto handler = make_awaitable_handler<TestData>([&](auto promise) {
                 promise.setValues(boost::system::error_code{}, expected);
@@ -376,6 +382,7 @@ TEST_F(MakeAwaitableTest, MakeAwaitableHandlerMoveOnlyTypes)
 
     net::co_spawn(
         io,
+        // NOLINTNEXTLINE(cppcoreguidelines-avoid-capturing-lambda-coroutines)
         [&]() -> net::awaitable<void> {
             auto handler =
                 make_awaitable_handler<std::unique_ptr<int>>([](auto promise) {
@@ -409,6 +416,7 @@ TEST_F(MakeAwaitableTest, MakeAwaitableHandlerVoidLike)
 
     net::co_spawn(
         io,
+        // NOLINTNEXTLINE(cppcoreguidelines-avoid-capturing-lambda-coroutines)
         [&]() -> net::awaitable<void> {
             auto handler = make_awaitable_handler<boost::system::error_code>(
                 [](auto promise) {
@@ -470,6 +478,7 @@ TEST_F(MakeAwaitableTest, MakeAwaitableHandlerDifferentErrors)
 
     net::co_spawn(
         io,
+        // NOLINTNEXTLINE(cppcoreguidelines-avoid-capturing-lambda-coroutines)
         [&]() -> net::awaitable<void> {
             // Test with connection_refused error
             auto handler1 = make_awaitable_handler<int>([](auto promise) {
@@ -478,6 +487,7 @@ TEST_F(MakeAwaitableTest, MakeAwaitableHandlerDifferentErrors)
                                   0);
             });
 
+            // NOLINTNEXTLINE(clang-analyzer-core.NullDereference)
             auto [ec1, val1] = co_await handler1();
             EXPECT_TRUE(ec1);
             EXPECT_EQ(ec1, boost::asio::error::connection_refused);

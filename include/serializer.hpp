@@ -16,7 +16,8 @@ namespace NSNAME
 class JsonSerializer
 {
   public:
-    JsonSerializer(std::string path, nlohmann::json js = nlohmann::json()) :
+    explicit JsonSerializer(std::string path,
+                            nlohmann::json js = nlohmann::json()) :
         serPath(path), jsonData(std::move(js))
     {}
     inline auto stringSplitter()

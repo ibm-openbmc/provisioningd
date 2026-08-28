@@ -162,8 +162,9 @@ struct TimedStreamer
         timer->cancel();
         co_return std::make_pair(ec, bytes);
     }
+    // NOLINTNEXTLINE(cppcoreguidelines-avoid-reference-coroutine-parameters)
     AwaitableResult<std::size_t> readUntil(boost::asio::streambuf& buffer,
-                                           const std::string& delim)
+                                           std::string delim)
     {
         boost::system::error_code ec;
         auto bytes = co_await net::async_read_until(
@@ -171,7 +172,7 @@ struct TimedStreamer
             boost::asio::redirect_error(net::use_awaitable, ec));
         co_return std::make_pair(ec, bytes);
     }
-    AwaitableResult<std::string> readUntil(const std::string& delim,
+    AwaitableResult<std::string> readUntil(std::string delim,
                                            bool timeout = true)
     {
         boost::asio::streambuf buffer;

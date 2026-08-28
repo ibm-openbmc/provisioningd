@@ -23,7 +23,7 @@ struct EventQueue
     struct DefaultEventProvider
     {
         net::awaitable<boost::system::error_code> operator()(
-            Streamer /*streamer*/, const std::string& event)
+            Streamer /*streamer*/, std::string event)
         {
             LOG_WARNING("Received event in defualt provider: {}", event);
             co_return boost::system::error_code{};
@@ -32,7 +32,7 @@ struct EventQueue
     struct DefaultEventConsumer
     {
         net::awaitable<boost::system::error_code> operator()(
-            Streamer /*streamer*/, const std::string& event)
+            Streamer /*streamer*/, std::string event)
         {
             LOG_WARNING("Received event in defualt Consumer: {}", event);
             // co_await sendHeader(streamer, "ConsumerNotFound");
@@ -137,7 +137,7 @@ struct EventQueue
     }
     net::awaitable<boost::system::error_code> executeProvider(
         std::reference_wrapper<EventProvider> provider, Streamer streamer,
-        const std::string& event)
+        std::string event)
     {
         try
         {
@@ -150,7 +150,7 @@ struct EventQueue
         }
     }
     net::awaitable<boost::system::error_code> barrierHandler(
-        const std::string& event, Streamer /*streamer*/)
+        std::string event, Streamer /*streamer*/)
     {
         auto [id, data] = parseEvent(event);
         if (data == "Begin")
@@ -168,7 +168,7 @@ struct EventQueue
     }
     net::awaitable<boost::system::error_code> sendEventHandler(
         uint64_t id, std::reference_wrapper<EventProvider> provider,
-        const std::string& event, Streamer streamer)
+        std::string event, Streamer streamer)
     {
         boost::system::error_code retCode{};
         auto [ec, size] = co_await streamer.write(net::buffer(event), false);
@@ -268,7 +268,7 @@ struct EventQueue
     }
     net::awaitable<boost::system::error_code> executeConsumer(
         std::reference_wrapper<EventConsumer> consumer, Streamer streamer,
-        const std::string& event)
+        std::string event)
     {
         try
         {

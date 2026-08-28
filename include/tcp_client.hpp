@@ -19,8 +19,9 @@ namespace ssl = boost::asio::ssl;
 using tcp = boost::asio::ip::tcp;
 
 inline AwaitableResult<net::ip::tcp::resolver::results_type> awaitable_resolve(
-    typename net::ip::tcp::resolver& resolver, const std::string& host,
-    const std::string& port)
+    // NOLINTNEXTLINE(cppcoreguidelines-avoid-reference-coroutine-parameters)
+    typename net::ip::tcp::resolver& resolver, std::string host,
+    std::string port)
 {
     auto h = make_awaitable_handler<net::ip::tcp::resolver::results_type>(
         [&](auto promise) {
@@ -46,6 +47,10 @@ class TcpClient
                                                            ssl_context)),
         timer_(std::make_shared<net::steady_timer>(io_context))
     {}
+    TcpClient(const TcpClient&) = delete;
+    TcpClient& operator=(const TcpClient&) = delete;
+    TcpClient(TcpClient&&) = delete;
+    TcpClient& operator=(TcpClient&&) = delete;
     ~TcpClient() noexcept
     {
         try
@@ -58,9 +63,10 @@ class TcpClient
         }
     }
 
-    net::awaitable<boost::system::error_code> connect(const std::string& host,
-                                                      const std::string& port)
+    net::awaitable<boost::system::error_code> connect(std::string host,
+                                                      std::string port)
     {
+        // NOLINTNEXTLINE(clang-analyzer-core.NullDereference)
         auto [ec, results] = co_await awaitable_resolve(resolver_, host, port);
         if (ec)
         {

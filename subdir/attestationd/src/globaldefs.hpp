@@ -16,6 +16,7 @@ constexpr auto ENTITY_SERVER_COMBINED_PATH_X =
     "{}etc/ssl/certs/https/server.pem";
 constexpr auto ENTITY_CLIENT_COMBINED_PATH_X =
     "{}etc/ssl/certs/https/client.pem";
+// NOLINTNEXTLINE(cppcoreguidelines-avoid-non-const-global-variables)
 extern std::string prefix;
 inline std::string getPrefix()
 {

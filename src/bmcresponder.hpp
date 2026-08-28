@@ -65,7 +65,7 @@ struct BmcResponder
         watcherCallback(true);
         while (true)
         {
-            std::array<char, MAX_MESSAGE_SIZE> data;
+            std::array<char, MAX_MESSAGE_SIZE> data{};
             boost::system::error_code ec;
             size_t bytes{0};
             std::tie(ec, bytes) =

@@ -64,6 +64,7 @@ class Tpm2CertManager
     {
         std::string cmd = std::vformat(
             cmdTemplate, std::make_format_args(std::forward<Args>(args)...));
+        // NOLINTNEXTLINE(concurrency-mt-unsafe)
         int result = system(cmd.c_str());
 
         if (result != 0)
@@ -93,9 +94,8 @@ class Tpm2CertManager
     static constexpr const char* OPENSSL_X509_CA_SIGN_EXT_CMD =
         R"(openssl x509 -req -in {} -CA {} -CAkey "handle:{}" -provider tpm2 -provider default -propquery '?provider=tpm2' -set_serial {} -out {} -days {} -extfile {} -extensions {} 2>&1)";
 
-    Tpm2CertManager()
+    Tpm2CertManager() : libCtx(OSSL_LIB_CTX_new())
     {
-        libCtx = OSSL_LIB_CTX_new();
         if (libCtx == nullptr)
         {
             throw std::runtime_error("Failed to allocate OSSL_LIB_CTX");
@@ -121,6 +121,7 @@ class Tpm2CertManager
         // The TPM Resource Manager (/dev/tpmrm0) handles serialization
         // automatically
         const char* tcti_conf = "device:/dev/tpmrm0";
+        // NOLINTNEXTLINE(concurrency-mt-unsafe)
         if (setenv("TPM2OPENSSL_TCTI", tcti_conf, 1) != 0)
         {
             LOG_WARNING("Failed to set TPM2OPENSSL_TCTI environment variable");
@@ -149,6 +150,10 @@ class Tpm2CertManager
     }
 
   public:
+    Tpm2CertManager(const Tpm2CertManager&) = delete;
+    Tpm2CertManager& operator=(const Tpm2CertManager&) = delete;
+    Tpm2CertManager(Tpm2CertManager&&) = delete;
+    Tpm2CertManager& operator=(Tpm2CertManager&&) = delete;
     ~Tpm2CertManager()
     {
         if (tpmProvider)
@@ -419,7 +424,7 @@ class Tpm2CertManager
                 boost::system::errc::io_error);
         }
 
-        int result;
+        int result = 0;
         if (password.empty())
         {
             result = PEM_write_PrivateKey(fp.get(), key.get(), NULL, NULL, 0,
@@ -427,10 +432,12 @@ class Tpm2CertManager
         }
         else
         {
+            // NOLINTBEGIN(cppcoreguidelines-pro-type-reinterpret-cast)
             result = PEM_write_PrivateKey(
                 fp.get(), key.get(), EVP_aes_256_cbc(),
-                (unsigned char*)password.c_str(),
+                reinterpret_cast<const unsigned char*>(password.c_str()),
                 static_cast<int>(password.length()), NULL, NULL);
+            // NOLINTEND(cppcoreguidelines-pro-type-reinterpret-cast)
         }
 
         if (result != 1)
@@ -890,6 +897,7 @@ class Tpm2CertManager
         std::string cmd =
             std::format("tpm2_nvread -C o {} > {} 2>&1", nvIndex, tempFile);
 
+        // NOLINTNEXTLINE(concurrency-mt-unsafe)
         if (system(cmd.c_str()) != 0)
         {
             LOG_ERROR("Failed to read from TPM NV index {}", nvIndex);
@@ -932,6 +940,7 @@ class Tpm2CertManager
     {
         std::string cmd = std::format("tpm2_nvundefine -C o {} 2>&1", nvIndex);
 
+        // NOLINTNEXTLINE(concurrency-mt-unsafe)
         if (system(cmd.c_str()) != 0)
         {
             LOG_ERROR("Failed to delete TPM NV index {}", nvIndex);
@@ -954,6 +963,7 @@ class Tpm2CertManager
         std::string cmd =
             std::format("tpm2_evictcontrol -C o -c {} 2>&1", handle);
 
+        // NOLINTNEXTLINE(concurrency-mt-unsafe)
         if (system(cmd.c_str()) != 0)
         {
             LOG_ERROR("Failed to delete TPM persistent handle {}", handle);
@@ -999,6 +1009,7 @@ class Tpm2CertManager
             std::format("tpm2_import -C {} -G rsa2048 -i {} -u {} -r {} 2>&1",
                         primaryCtx, keyFile, pubFile, privFile);
 
+        // NOLINTNEXTLINE(concurrency-mt-unsafe)
         if (system(importCmd.c_str()) != 0)
         {
             LOG_ERROR("Failed to import private key {} into TPM", keyFile);
@@ -1134,6 +1145,7 @@ class Tpm2CertManager
         std::string caCertFile = "/tmp/ca_cert.pem";
         std::string readCmd =
             std::format("tpm2_nvread -C o {} > {} 2>&1", caNVIndex, caCertFile);
+        // NOLINTNEXTLINE(concurrency-mt-unsafe)
         if (system(readCmd.c_str()) != 0)
         {
             LOG_ERROR("Failed to read CA cert from NV");
@@ -1565,11 +1577,13 @@ class Tpm2CertManager
         // Check if NV index already exists and delete it
         std::string checkCmd =
             std::format("tpm2_nvreadpublic {} 2>/dev/null", nvIndex);
+        // NOLINTNEXTLINE(concurrency-mt-unsafe)
         if (system(checkCmd.c_str()) == 0)
         {
             LOG_DEBUG("NV index {} already exists, deleting it", nvIndex);
             std::string deleteCmd =
                 std::format("tpm2_nvundefine {} 2>&1", nvIndex);
+            // NOLINTNEXTLINE(concurrency-mt-unsafe)
             system(deleteCmd.c_str()); // Ignore errors
         }
 
@@ -1578,6 +1592,7 @@ class Tpm2CertManager
             R"(tpm2_nvdefine {} -C o -s {} -a "ownerread|ownerwrite" 2>&1)",
             nvIndex, keySize);
 
+        // NOLINTNEXTLINE(concurrency-mt-unsafe)
         if (system(defineCmd.c_str()) != 0)
         {
             LOG_WARNING(
@@ -1590,6 +1605,7 @@ class Tpm2CertManager
         std::string writeCmd = std::format("tpm2_nvwrite {} -C o -i {} 2>&1",
                                            nvIndex, keyFilePath);
 
+        // NOLINTNEXTLINE(concurrency-mt-unsafe)
         if (system(writeCmd.c_str()) != 0)
         {
             LOG_WARNING("Failed to write key to TPM NV {}, continuing...",
@@ -1629,6 +1645,7 @@ class Tpm2CertManager
             "tpm2_print -t TPM2B_PUBLIC /tmp/key_{}.pub > {} 2>&1",
             persistentHandle, persistentHandle, persistentHandle, tempKeyFile);
 
+        // NOLINTNEXTLINE(concurrency-mt-unsafe)
         if (system(exportCmd.c_str()) != 0)
         {
             LOG_WARNING("Failed to export key from handle {} for NV storage, "
@@ -1664,11 +1681,13 @@ class Tpm2CertManager
         // Check if NV index already exists and delete it
         std::string checkCmd =
             std::format("tpm2_nvreadpublic {} 2>/dev/null", nvIndex);
+        // NOLINTNEXTLINE(concurrency-mt-unsafe)
         if (system(checkCmd.c_str()) == 0)
         {
             LOG_DEBUG("NV index {} already exists, deleting it", nvIndex);
             std::string deleteCmd =
                 std::format("tpm2_nvundefine {} 2>&1", nvIndex);
+            // NOLINTNEXTLINE(concurrency-mt-unsafe)
             system(deleteCmd.c_str()); // Ignore errors
         }
 
@@ -1677,6 +1696,7 @@ class Tpm2CertManager
             R"(tpm2_nvdefine {} -C o -s {} -a "ownerread|ownerwrite" 2>&1)",
             nvIndex, keySize);
 
+        // NOLINTNEXTLINE(concurrency-mt-unsafe)
         if (system(defineCmd.c_str()) != 0)
         {
             LOG_WARNING(
@@ -1692,6 +1712,7 @@ class Tpm2CertManager
         std::string writeCmd = std::format("tpm2_nvwrite {} -C o -i {} 2>&1",
                                            nvIndex, tempKeyFile);
 
+        // NOLINTNEXTLINE(concurrency-mt-unsafe)
         if (system(writeCmd.c_str()) != 0)
         {
             LOG_WARNING("Failed to write key to TPM NV {}, continuing...",

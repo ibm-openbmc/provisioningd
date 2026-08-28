@@ -28,6 +28,7 @@ inline std::string currentTime()
                       now.time_since_epoch()) %
                   1000;
 
+    // NOLINTNEXTLINE(concurrency-mt-unsafe)
     std::tm tm = *std::localtime(&now_time_t);
     std::ostringstream oss;
     oss << std::put_time(&tm, "%H:%M:%S") << '.' << std::setw(3)
@@ -67,6 +68,7 @@ inline AwaitableResult<size_t> readData(Streamer streamer,
 inline AwaitableResult<size_t> sendData(Streamer streamer,
                                         net::const_buffer buffer)
 {
+    // NOLINTNEXTLINE(clang-analyzer-core.NullDereference)
     auto [ec, size] = co_await streamer.write(buffer, timeoutneeded);
     if (ec)
     {
@@ -88,8 +90,7 @@ inline AwaitableResult<std::string> readHeader(Streamer streamer)
     LOG_DEBUG("{} Recieved Header: {}", currentTime(), data);
     co_return std::make_pair(ec, data);
 }
-inline AwaitableResult<size_t> sendHeader(Streamer streamer,
-                                          const std::string& data)
+inline AwaitableResult<size_t> sendHeader(Streamer streamer, std::string data)
 {
     std::string header = std::format("{}{}", data, HEDER_DELIM);
     LOG_DEBUG("{} Sending Header: {}", currentTime(), header);
