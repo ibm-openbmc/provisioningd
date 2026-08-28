@@ -38,9 +38,10 @@ class DebugController
      * @param conn D-Bus connection
      * @param objServer Object server for registering D-Bus interfaces
      */
-    DebugController(std::shared_ptr<sdbusplus::asio::connection> conn,
-                    std::shared_ptr<sdbusplus::asio::object_server> objServer) :
-        conn(conn), objServer(objServer)
+    DebugController(
+        std::shared_ptr<sdbusplus::asio::connection> conn,
+        const std::shared_ptr<sdbusplus::asio::object_server>& objServer) :
+        conn(std::move(conn)), objServer(objServer)
     {
         // Create the D-Bus interface
         iface = objServer->add_interface(objPath, interface);
@@ -48,12 +49,12 @@ class DebugController
         // Register SetLogLevel method
         iface->register_method("SetLogLevel",
                                [this](const std::string& level) -> bool {
-                                   return this->setLogLevel(level);
+                                   return DebugController::setLogLevel(level);
                                });
 
         // Register GetLogLevel method
         iface->register_method("GetLogLevel", [this]() -> std::string {
-            return this->getLogLevel();
+            return DebugController::getLogLevel();
         });
 
         // Initialize the interface
@@ -73,25 +74,25 @@ class DebugController
      * @param levelStr String representation of log level
      * @return std::optional<LogLevel> LogLevel if valid, nullopt otherwise
      */
-    std::optional<LogLevel> stringToLogLevel(const std::string& levelStr)
+    static std::optional<LogLevel> stringToLogLevel(const std::string& levelStr)
     {
         if (levelStr == "DEBUG")
         {
             return LogLevel::DEBUG;
         }
-        else if (levelStr == "INFO")
+        if (levelStr == "INFO")
         {
             return LogLevel::INFO;
         }
-        else if (levelStr == "WARNING")
+        if (levelStr == "WARNING")
         {
             return LogLevel::WARNING;
         }
-        else if (levelStr == "ERROR")
+        if (levelStr == "ERROR")
         {
             return LogLevel::ERROR;
         }
-        else if (levelStr == "CRITICAL")
+        if (levelStr == "CRITICAL")
         {
             return LogLevel::CRITICAL;
         }
@@ -104,7 +105,7 @@ class DebugController
      * @param level LogLevel enum value
      * @return std::string String representation of log level
      */
-    std::string logLevelToString(LogLevel level)
+    static std::string logLevelToString(LogLevel level)
     {
         switch (level)
         {
@@ -130,7 +131,7 @@ class DebugController
      * @return true if log level was successfully set
      * @return false if invalid log level string provided
      */
-    bool setLogLevel(const std::string& levelStr)
+    static bool setLogLevel(const std::string& levelStr)
     {
         // Convert to uppercase for case-insensitive comparison
         std::string upperLevel = levelStr;
@@ -154,7 +155,7 @@ class DebugController
      *
      * @return std::string String representation of current log level
      */
-    std::string getLogLevel()
+    static std::string getLogLevel()
     {
         LogLevel currentLevel = getLogger().getLogLevel();
         return logLevelToString(currentLevel);

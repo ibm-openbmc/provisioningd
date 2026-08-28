@@ -39,7 +39,7 @@ struct EventQueue
             co_return boost::system::error_code{};
         }
     };
-    EventQueue(net::any_io_executor ioContext, TcpStreamType& acceptor,
+    EventQueue(const net::any_io_executor& ioContext, TcpStreamType& acceptor,
                net::ssl::context& sslClientContext, const std::string& url,
                const std::string& port, int maxConnections = 1) :
         taskQueue(ioContext, sslClientContext, url, port, maxConnections),
@@ -48,7 +48,7 @@ struct EventQueue
         addEventProvider("default", defaultProvider);
         addEventConsumer("default", defaultConsumer);
     }
-    EventQueue(net::any_io_executor ioContext, TcpStreamType& acceptor,
+    EventQueue(const net::any_io_executor& ioContext, TcpStreamType& acceptor,
                net::ssl::context& sslClientContext, int maxConnections = 1) :
         taskQueue(ioContext, sslClientContext, maxConnections),
         tcpServer(ioContext, acceptor, *this), serializer(EVENTQUEFILE)
@@ -81,7 +81,7 @@ struct EventQueue
     {
         eventConsumers[eventId] = std::move(consumer);
     }
-    std::optional<std::string> readFile(const std::string& filePath)
+    static std::optional<std::string> readFile(const std::string& filePath)
     {
         std::ifstream file(filePath);
         if (!file.is_open())
@@ -114,6 +114,7 @@ struct EventQueue
     void store()
     {
         std::vector<std::string> events;
+        events.reserve(this->events.size());
         for (auto& [id, event] : this->events)
         {
             events.push_back(std::to_string(id) + "," + event);
@@ -122,7 +123,7 @@ struct EventQueue
         serializer.store();
     }
 
-    std::string getEventId(std::string_view event)
+    static std::string getEventId(std::string_view event)
     {
         if (event.find(':') != std::string::npos)
         {
@@ -135,7 +136,7 @@ struct EventQueue
     {
         events.erase(id);
     }
-    net::awaitable<boost::system::error_code> executeProvider(
+    static net::awaitable<boost::system::error_code> executeProvider(
         std::reference_wrapper<EventProvider> provider, Streamer streamer,
         std::string event)
     {
@@ -266,7 +267,7 @@ struct EventQueue
         }
         return false;
     }
-    net::awaitable<boost::system::error_code> executeConsumer(
+    static net::awaitable<boost::system::error_code> executeConsumer(
         std::reference_wrapper<EventConsumer> consumer, Streamer streamer,
         std::string event)
     {

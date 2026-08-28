@@ -29,7 +29,7 @@ struct DbusWatcher : std::enable_shared_from_this<Derived>
     DbusWatcher(DbusWatcher&&) = delete;
     DbusWatcher& operator=(DbusWatcher&&) = delete;
     explicit DbusWatcher(std::shared_ptr<sdbusplus::asio::connection> conn) :
-        conn(conn)
+        conn(std::move(conn))
     {}
     ~DbusWatcher()
     {
@@ -108,8 +108,8 @@ struct DbusWatcher : std::enable_shared_from_this<Derived>
     }
     template <typename... Args>
     static void watch(net::io_context& ctx,
-                      std::shared_ptr<sdbusplus::asio::connection> conn,
-                      WatchHandler<PropType> auto callback, Args... args)
+                      const std::shared_ptr<sdbusplus::asio::connection>& conn,
+                      WatchHandler<PropType> auto callback, const Args&... args)
     {
         auto watcher = Derived::create(conn, args...);
         // NOLINTBEGIN(cppcoreguidelines-avoid-capturing-lambda-coroutines,cppcoreguidelines-avoid-reference-coroutine-parameters)
@@ -316,7 +316,8 @@ struct DbusSignalWatcher : public DbusWatcher<DbusSignalWatcher<TYPE>, TYPE>
     }
     template <typename... Args>
     static std::shared_ptr<DbusSignalWatcher<TYPE>> create(
-        std::shared_ptr<sdbusplus::asio::connection> conn, Args&&... args)
+        const std::shared_ptr<sdbusplus::asio::connection>& conn,
+        Args&&... args)
     {
         auto watcher = std::make_shared<DbusSignalWatcher<TYPE>>(
             PrivateTag{}, conn, std::forward<Args>(args)...);
@@ -327,7 +328,7 @@ struct DbusSignalWatcher : public DbusWatcher<DbusSignalWatcher<TYPE>, TYPE>
     DbusSignalWatcher(PrivateTag,
                       std::shared_ptr<sdbusplus::asio::connection> conn,
                       const std::string& intf, const std::string& signal) :
-        BASE(conn)
+        BASE(std::move(conn))
 
     {
         signalMatchRule = std::format(
@@ -336,7 +337,7 @@ struct DbusSignalWatcher : public DbusWatcher<DbusSignalWatcher<TYPE>, TYPE>
     DbusSignalWatcher(PrivateTag,
                       std::shared_ptr<sdbusplus::asio::connection> conn,
                       const std::string& matchRule) :
-        BASE(conn), signalMatchRule(matchRule)
+        BASE(std::move(conn)), signalMatchRule(matchRule)
     {}
     DbusSignalWatcher(PrivateTag,
                       std::shared_ptr<sdbusplus::asio::connection> conn) :

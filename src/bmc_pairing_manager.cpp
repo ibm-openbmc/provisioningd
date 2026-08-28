@@ -78,11 +78,8 @@ net::awaitable<bool> writeHello(std::reference_wrapper<TcpClient> client)
                 retryCount);
             continue;
         }
-        else
-        {
-            LOG_ERROR("Connect error: {}", ec.message());
-            co_return false;
-        }
+        LOG_ERROR("Connect error: {}", ec.message());
+        co_return false;
     }
     co_return false;
 }
@@ -411,7 +408,7 @@ std::shared_ptr<BmcResponder> initializeResponder(
 
 std::function<void(const std::string&)> createPairingHandler(
     net::io_context& io_context,
-    std::shared_ptr<sdbusplus::asio::connection> conn, short port,
+    const std::shared_ptr<sdbusplus::asio::connection>& conn, short port,
     const std::string& iface, BmcPairingManagerObject& controller,
     std::shared_ptr<BmcResponder>& bmcResponder)
 {
@@ -437,9 +434,10 @@ auto createNeighbourHandler(net::io_context& io_context,
     };
 }
 
-auto createFallbackHandler(net::io_context& io_context,
-                           std::shared_ptr<sdbusplus::asio::connection> conn,
-                           const std::string& iface, auto neighbourHandler)
+auto createFallbackHandler(
+    net::io_context& io_context,
+    const std::shared_ptr<sdbusplus::asio::connection>& conn,
+    const std::string& iface, auto neighbourHandler)
 {
     return [&io_context, conn, &iface, neighbourHandler]() {
         net::co_spawn(io_context,
@@ -449,7 +447,7 @@ auto createFallbackHandler(net::io_context& io_context,
 }
 
 void setupWatchers(net::io_context& io_context,
-                   std::shared_ptr<sdbusplus::asio::connection> conn,
+                   const std::shared_ptr<sdbusplus::asio::connection>& conn,
                    const ApplicationConfig& config,
                    BmcPairingManagerObject& controller,
                    std::shared_ptr<BmcResponder>& bmcResponder)

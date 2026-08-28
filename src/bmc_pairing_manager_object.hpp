@@ -50,8 +50,9 @@ struct BmcPairingManagerObject : Ifaces
     BmcPairingManagerObject(BmcPairingManagerObject&&) = delete;
     BmcPairingManagerObject& operator=(BmcPairingManagerObject&&) = delete;
 
-    BmcPairingManagerObject(net::io_context& ctx,
-                            std::shared_ptr<sdbusplus::asio::connection> conn) :
+    BmcPairingManagerObject(
+        net::io_context& ctx,
+        const std::shared_ptr<sdbusplus::asio::connection>& conn) :
         Ifaces(*conn, objPath, Ifaces::action::defer_emit), ioContext(ctx),
         conn(conn), picController()
     {
@@ -87,7 +88,7 @@ struct BmcPairingManagerObject : Ifaces
         {
             // Spawn async task to set paired state
             net::co_spawn(ioContext, setPaired(true), net::detached);
-            return sdbusplus::message::object_path(objPath);
+            return {objPath};
         }
         if (!paired())
         {
@@ -95,7 +96,7 @@ struct BmcPairingManagerObject : Ifaces
             throw NotAllowed();
         }
         pairingHandler(bmcId);
-        return sdbusplus::message::object_path(objPath);
+        return {objPath};
     }
 
     void setPairingHandler(PAIRING_HANDLER handler)
@@ -163,8 +164,8 @@ struct BmcPairingManagerObject : Ifaces
         return highestState;
     }
 
-    PeerConnectionStatus maxStatus(PeerConnectionStatus first,
-                                   PeerConnectionStatus second) const
+    static PeerConnectionStatus maxStatus(PeerConnectionStatus first,
+                                          PeerConnectionStatus second)
     {
         if (first == PeerConnectionStatus::Connected ||
             second == PeerConnectionStatus::Connected)

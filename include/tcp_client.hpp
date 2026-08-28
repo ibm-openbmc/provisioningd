@@ -118,7 +118,7 @@ class TcpClient
     }
     TimedStreamer<ssl::stream<tcp::socket>> streamer()
     {
-        return TimedStreamer(stream_, timer_);
+        return {stream_, timer_};
     }
     void close() noexcept
     {

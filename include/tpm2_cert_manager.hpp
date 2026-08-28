@@ -221,8 +221,8 @@ class Tpm2CertManager
         const char* propq = "?provider=tpm2";
         EVP_PKEY* pkey = nullptr;
 
-        storeCtx = OSSL_STORE_open_ex(tpmUri.c_str(), libCtx, propq, NULL, NULL,
-                                      NULL, NULL, NULL);
+        storeCtx = OSSL_STORE_open_ex(tpmUri.c_str(), libCtx, propq, nullptr,
+                                      nullptr, nullptr, nullptr, nullptr);
 
         if (!storeCtx)
         {
@@ -287,8 +287,8 @@ class Tpm2CertManager
         const char* propq = "?provider=tpm2";
         X509* cert = nullptr;
 
-        storeCtx = OSSL_STORE_open_ex(tpmUri.c_str(), libCtx, propq, NULL, NULL,
-                                      NULL, NULL, NULL);
+        storeCtx = OSSL_STORE_open_ex(tpmUri.c_str(), libCtx, propq, nullptr,
+                                      nullptr, nullptr, nullptr, nullptr);
 
         if (!storeCtx)
         {
@@ -427,8 +427,8 @@ class Tpm2CertManager
         int result = 0;
         if (password.empty())
         {
-            result = PEM_write_PrivateKey(fp.get(), key.get(), NULL, NULL, 0,
-                                          NULL, NULL);
+            result = PEM_write_PrivateKey(fp.get(), key.get(), nullptr, nullptr,
+                                          0, nullptr, nullptr);
         }
         else
         {
@@ -436,7 +436,7 @@ class Tpm2CertManager
             result = PEM_write_PrivateKey(
                 fp.get(), key.get(), EVP_aes_256_cbc(),
                 reinterpret_cast<const unsigned char*>(password.c_str()),
-                static_cast<int>(password.length()), NULL, NULL);
+                static_cast<int>(password.length()), nullptr, nullptr);
             // NOLINTEND(cppcoreguidelines-pro-type-reinterpret-cast)
         }
 
@@ -890,7 +890,7 @@ class Tpm2CertManager
      * @param outCert Output certificate pointer
      * @return error_code indicating success or failure
      */
-    boost::system::error_code readCertificateFromTPMNV(
+    static boost::system::error_code readCertificateFromTPMNV(
         const std::string& nvIndex, X509Ptr& outCert)
     {
         std::string tempFile = std::format("/tmp/cert_{}.pem", nvIndex);
@@ -936,7 +936,8 @@ class Tpm2CertManager
      * @param nvIndex NV index to delete
      * @return error_code indicating success or failure
      */
-    boost::system::error_code deleteTPMNVIndex(const std::string& nvIndex)
+    static boost::system::error_code deleteTPMNVIndex(
+        const std::string& nvIndex)
     {
         std::string cmd = std::format("tpm2_nvundefine -C o {} 2>&1", nvIndex);
 
@@ -957,7 +958,7 @@ class Tpm2CertManager
      * @param handle Persistent handle to delete
      * @return error_code indicating success or failure
      */
-    boost::system::error_code deleteTPMPersistentHandle(
+    static boost::system::error_code deleteTPMPersistentHandle(
         const std::string& handle)
     {
         std::string cmd =

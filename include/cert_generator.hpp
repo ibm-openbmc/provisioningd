@@ -41,16 +41,16 @@ using X509Ptr = openssl_ptr<X509, X509_free>;
 using BIOPtr = openssl_ptr<BIO, BIO_free_all>;
 X509Ptr makeX509Ptr(X509* ptr)
 {
-    return X509Ptr(ptr, X509_free);
+    return {ptr, X509_free};
 }
 using EVP_PKEYPtr = openssl_ptr<EVP_PKEY, EVP_PKEY_free>;
 EVP_PKEYPtr makeEVPPKeyPtr(EVP_PKEY* ptr)
 {
-    return EVP_PKEYPtr(ptr, EVP_PKEY_free);
+    return {ptr, EVP_PKEY_free};
 }
 BIOPtr makeBIOPtr(BIO* ptr)
 {
-    return BIOPtr(ptr, BIO_free_all);
+    return {ptr, BIO_free_all};
 }
 
 // RAII wrapper for FILE* to prevent resource leaks
@@ -154,8 +154,8 @@ class Tpm2
         const char* propq = "?provider=tpm2";
         EVP_PKEY* pkey = nullptr;
 
-        storeCtx = OSSL_STORE_open_ex(tpmUri.c_str(), libCtx, propq, NULL, NULL,
-                                      NULL, NULL, NULL);
+        storeCtx = OSSL_STORE_open_ex(tpmUri.c_str(), libCtx, propq, nullptr,
+                                      nullptr, nullptr, nullptr, nullptr);
 
         if (!storeCtx)
         {
@@ -204,8 +204,8 @@ class Tpm2
         const char* propq = "?provider=tpm2";
         X509* cert = nullptr;
 
-        storeCtx = OSSL_STORE_open_ex(tpmUri.c_str(), libCtx, propq, NULL, NULL,
-                                      NULL, NULL, NULL);
+        storeCtx = OSSL_STORE_open_ex(tpmUri.c_str(), libCtx, propq, nullptr,
+                                      nullptr, nullptr, nullptr, nullptr);
 
         if (!storeCtx)
         {
@@ -604,7 +604,7 @@ openssl_ptr<EVP_PKEY, EVP_PKEY_free> loadPrivateKey(const std::string& path,
     }
 
     BIO_free(keybio);
-    return openssl_ptr<EVP_PKEY, EVP_PKEY_free>(pkey, EVP_PKEY_free);
+    return {pkey, EVP_PKEY_free};
 }
 openssl_ptr<X509, X509_free> loadCertificate(const std::string& path,
                                              bool pem = true)
@@ -622,7 +622,7 @@ openssl_ptr<X509, X509_free> loadCertificate(const std::string& path,
         cert = d2i_X509_bio(certbio, nullptr);
     }
     BIO_free(certbio);
-    return openssl_ptr<X509, X509_free>(cert, X509_free);
+    return {cert, X509_free};
 }
 openssl_ptr<X509_NAME, X509_NAME_free> generateX509Name(
     const std::string& common_name)
@@ -1108,7 +1108,7 @@ bool saveCertificate(const std::string& path, const std::vector<X509*>& certs,
             }
         }
     }
-    return saveBio(path, std::move(bio));
+    return saveBio(path, bio);
 }
 
 openssl_ptr<BIO, BIO_free_all> privateKeyToBio(
@@ -1157,7 +1157,7 @@ std::string toString(const openssl_ptr<X509, X509_free>& cert, bool pem = true)
 
     BUF_MEM* buf = nullptr;
     BIO_get_mem_ptr(bio.get(), &buf);
-    return std::string(buf->data, buf->length);
+    return {buf->data, buf->length};
 }
 std::string toString(const openssl_ptr<EVP_PKEY, EVP_PKEY_free>& pkey,
                      bool pem = true)
@@ -1170,7 +1170,7 @@ std::string toString(const openssl_ptr<EVP_PKEY, EVP_PKEY_free>& pkey,
     }
     BUF_MEM* buf = nullptr;
     BIO_get_mem_ptr(bio.get(), &buf);
-    return std::string(buf->data, buf->length);
+    return {buf->data, buf->length};
 }
 EVP_PKEYPtr getPublicKeyFromCert(const openssl_ptr<X509, X509_free>& cert)
 {
@@ -1197,7 +1197,7 @@ std::string getPublicKeyStringFromCert(X509Ptr signcert)
     if (!pkey)
     {
         LOG_ERROR("Error: Unable to get public key from certificate.");
-        return std::string();
+        return {};
     }
     openssl_ptr<BIO, BIO_free_all> bio(BIO_new(BIO_s_mem()), BIO_free_all);
     if (!PEM_write_bio_PUBKEY(bio.get(), pkey.get()))
@@ -1208,6 +1208,6 @@ std::string getPublicKeyStringFromCert(X509Ptr signcert)
 
     BUF_MEM* buf = nullptr;
     BIO_get_mem_ptr(bio.get(), &buf);
-    return std::string(buf->data, buf->length);
+    return {buf->data, buf->length};
 }
 } // namespace NSNAME

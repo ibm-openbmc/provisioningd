@@ -128,7 +128,7 @@ inline bool saveCombinedCertAndKey(const X509Ptr& cert, const EVP_PKEYPtr& key,
         return false;
     }
 
-    if (!saveBio(filename, std::move(combined_bio)))
+    if (!saveBio(filename, combined_bio))
     {
         LOG_ERROR("Failed to save combined certificate and key to {}",
                   filename);
@@ -287,7 +287,7 @@ struct CertificateExchanger
         }
         return true;
     }
-    bool installCertificates(const std::string& castr)
+    static bool installCertificates(const std::string& castr)
     {
         openssl_ptr<BIO, BIO_free_all> bio(
             BIO_new_mem_buf(castr.data(), static_cast<int>(castr.size())),
@@ -381,7 +381,7 @@ struct CertificateExchanger
         LOG_DEBUG("Certificates installed successfully");
         co_return true;
     }
-    net::awaitable<bool> recieveCertificateStatus(Streamer streamer)
+    static net::awaitable<bool> recieveCertificateStatus(Streamer streamer)
     {
         auto [ec, event] = co_await readHeader(streamer);
         if (ec)
@@ -407,7 +407,8 @@ struct CertificateExchanger
         co_return false;
     }
     // NOLINTNEXTLINE(cppcoreguidelines-avoid-reference-coroutine-parameters)
-    net::awaitable<bool> sendInstallStatus(Streamer& streamer, bool status)
+    static net::awaitable<bool> sendInstallStatus(Streamer& streamer,
+                                                  bool status)
     {
         nlohmann::json jsonBody;
         jsonBody["status"] = status;
@@ -421,7 +422,7 @@ struct CertificateExchanger
         }
         co_return status;
     }
-    net::awaitable<bool> recieveCertificate(Streamer streamer)
+    static net::awaitable<bool> recieveCertificate(Streamer streamer)
     {
         auto [ec, event] = co_await readHeader(streamer);
         if (ec)

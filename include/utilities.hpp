@@ -9,7 +9,7 @@ namespace NSNAME
 {
 inline std::string toString(std::string_view vw)
 {
-    return std::string(vw.data(), vw.length());
+    return {vw.data(), vw.length()};
 }
 inline auto stringSplitter(char c, int skip = 0)
 {
