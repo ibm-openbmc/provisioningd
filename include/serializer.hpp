@@ -18,9 +18,9 @@ class JsonSerializer
   public:
     explicit JsonSerializer(std::string path,
                             nlohmann::json js = nlohmann::json()) :
-        serPath(path), jsonData(std::move(js))
+        serPath(std::move(path)), jsonData(std::move(js))
     {}
-    inline auto stringSplitter()
+    static inline auto stringSplitter()
     {
         return std::views::split('/') | std::views::transform([](auto&& sub) {
                    return std::string(sub.begin(), sub.end());
@@ -35,9 +35,9 @@ class JsonSerializer
         nlohmann::json init;
         init[rv.front()] = value;
         auto newJson = std::reduce(rv.begin() + 1, rv.end(), init,
-                                   [](auto sofar, auto currentKey) {
+                                   [](const auto& sofar, auto currentKey) {
                                        nlohmann::json j;
-                                       j[currentKey] = sofar;
+                                       j[std::move(currentKey)] = sofar;
                                        return j;
                                    });
         return newJson;
@@ -62,7 +62,7 @@ class JsonSerializer
         jsonData.merge_patch(makeJson(key, value));
     }
     template <typename T>
-    void deserialize(std::string key, T& value)
+    void deserialize(const std::string& key, T& value)
     {
         auto leaf = getLeafNode(key);
         if (leaf)
@@ -70,7 +70,7 @@ class JsonSerializer
             value = *leaf;
         }
     }
-    void erase(std::string key)
+    void erase(const std::string& key)
     {
         if (jsonData.contains(key))
         {

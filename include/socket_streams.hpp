@@ -66,12 +66,12 @@ struct TcpStreamType
     net::any_io_executor context;
     boost::asio::ssl::context& ssl_context_;
 
-    TcpStreamType(net::any_io_executor io_context, short port,
+    TcpStreamType(const net::any_io_executor& io_context, short port,
                   boost::asio::ssl::context& ssl_context) :
         acceptor_(io_context, tcp::endpoint(tcp::v4(), port)),
         context(io_context), ssl_context_(ssl_context)
     {}
-    TcpStreamType(net::any_io_executor io_context, const std::string& ip,
+    TcpStreamType(const net::any_io_executor& io_context, const std::string& ip,
                   short port, boost::asio::ssl::context& ssl_context) :
         acceptor_(io_context,
                   tcp::endpoint(boost::asio::ip::make_address(ip), port)),
@@ -93,7 +93,7 @@ struct TcpStreamType
                 }
             });
     }
-    auto getRemoteEndpoint(stream_type& socket)
+    static auto getRemoteEndpoint(stream_type& socket)
     {
         return socket.next_layer().remote_endpoint();
     }
@@ -115,7 +115,8 @@ struct UnixStreamType
     unix_domain::acceptor acceptor_;
     net::any_io_executor context;
     boost::asio::ssl::context& ssl_context_;
-    UnixStreamType(net::any_io_executor io_context, const std::string& path,
+    UnixStreamType(const net::any_io_executor& io_context,
+                   const std::string& path,
                    boost::asio::ssl::context& ssl_context) :
         acceptor_(io_context,
                   boost::asio::local::stream_protocol::endpoint(path)),
@@ -136,7 +137,7 @@ struct UnixStreamType
                 }
             });
     }
-    auto getRemoteEndpoint(stream_type& /*socket*/)
+    static auto getRemoteEndpoint(stream_type& /*socket*/)
     {
         return tcp::endpoint();
     }
@@ -147,7 +148,7 @@ struct TimedStreamer
 {
     TimedStreamer(std::shared_ptr<StreamType> socket,
                   std::shared_ptr<net::steady_timer> timer) :
-        socket(socket), timer(timer)
+        socket(std::move(socket)), timer(std::move(timer))
     {}
     AwaitableResult<std::size_t> read(net::mutable_buffer data,
                                       bool timeout = true)

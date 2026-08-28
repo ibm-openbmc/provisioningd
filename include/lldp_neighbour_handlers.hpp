@@ -99,7 +99,7 @@ auto makeNeighbourDiscoveryHandler(Handler handler,
  */
 template <typename Handler>
 auto makeNeighbourUpdateHandler(
-    std::shared_ptr<sdbusplus::asio::connection> conn,
+    const std::shared_ptr<sdbusplus::asio::connection>& conn,
     const std::string& ifaceName, Handler handler)
 {
     // NOLINTBEGIN(cppcoreguidelines-avoid-capturing-lambda-coroutines)

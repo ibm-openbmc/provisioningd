@@ -248,7 +248,8 @@ struct AttestationHandler
         }
         co_return success;
     }
-    net::awaitable<bool> sendMeasurementDone(Streamer streamer, bool success)
+    static net::awaitable<bool> sendMeasurementDone(Streamer streamer,
+                                                    bool success)
     {
         nlohmann::json jsonBody;
         jsonBody["status"] = success;

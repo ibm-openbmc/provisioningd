@@ -14,16 +14,13 @@ class TaskQueue
         TcpClient client;
         bool available = true;
         Client(net::any_io_executor ioContext, net::ssl::context& sslContext) :
-            client(ioContext, sslContext)
+            client(std::move(ioContext), sslContext)
         {}
         Client(const Client&) = delete;
         Client& operator=(const Client&) = delete;
         Client(Client&&) = delete;
         Client& operator=(Client&&) = delete;
-        ~Client()
-        {
-            // client.close();
-        }
+        ~Client() = default;
         bool isAvailable() const
         {
             return available;
@@ -70,13 +67,14 @@ class TaskQueue
   public:
     TaskQueue(net::any_io_executor ioContext, net::ssl::context& sslContext,
               int maxConnections = 1) :
-        sslContext(sslContext), ioContext(ioContext), maxClients(maxConnections)
+        sslContext(sslContext), ioContext(std::move(ioContext)),
+        maxClients(maxConnections)
     {}
     TaskQueue(net::any_io_executor ioContext, net::ssl::context& sslContext,
               const std::string& url, const std::string& port,
               int maxConnections = 1) :
-        endPoint{url, port}, sslContext(sslContext), ioContext(ioContext),
-        maxClients(maxConnections)
+        endPoint{url, port}, sslContext(sslContext),
+        ioContext(std::move(ioContext)), maxClients(maxConnections)
     {}
     void setEndPoint(const std::string& url, const std::string& port)
     {

@@ -282,7 +282,7 @@ TEST_F(SdbusCallsTest, GetPropertiesFromMapTypeMismatch)
     PropertyMap propMap;
     propMap["prop1"] = int32_t(100);
     propMap["prop2"] = std::string("not_an_int"); // Type mismatch
-    propMap["prop3"] = bool(true);
+    propMap["prop3"] = true;
 
     auto [ec, val1, val2, val3] = getPropertiesFromMap<int32_t, int32_t, bool>(
         propMap, "prop1", "prop2", "prop3");
@@ -454,7 +454,7 @@ TEST_F(SdbusCallsTest, PropertyMapVariantAlternatives)
     PropertyMap propMap;
 
     // Test each variant alternative
-    propMap["alt0"] = bool(true);
+    propMap["alt0"] = true;
     propMap["alt1"] = int32_t(-100);
     propMap["alt2"] = std::string("variant_test");
     propMap["alt3"] = uint32_t(200);
@@ -481,7 +481,7 @@ TEST_F(SdbusCallsTest, InterfaceMapMultipleInterfaces)
     props1["prop2"] = std::string("interface1");
 
     PropertyMap props2;
-    props2["propA"] = bool(true);
+    props2["propA"] = true;
     props2["propB"] = uint32_t(100);
 
     ifaceMap["xyz.openbmc_project.Interface1"] = props1;

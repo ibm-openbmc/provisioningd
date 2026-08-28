@@ -74,7 +74,7 @@ void combineContexts(ssl::context& defaultCtx,
                     SSL_set_SSL_CTX(s, new_ctx);
                     std::cout
                         << "Switched to SSL_CTX for hostname: " << servername
-                        << std::endl;
+                        << '\n';
                     return SSL_CLIENT_HELLO_SUCCESS;
                 }
             }
@@ -129,7 +129,7 @@ void intialiseAttestationHandler(
 
 auto createNeighbourHandler(
     net::io_context& io_context,
-    std::shared_ptr<sdbusplus::asio::connection> conn,
+    const std::shared_ptr<sdbusplus::asio::connection>& conn,
     sdbusplus::asio::object_server& dbusServer,
     AttestationHandler& attestationHandler,
     AttestationResponderIface& attestationResponder,

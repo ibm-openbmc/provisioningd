@@ -91,7 +91,7 @@ std::optional<ssl::context> getClientContext()
         ssl_context.use_certificate_chain_file(ENTITY_CLIENT_CERT_PATH());
         ssl_context.use_private_key_file(CLIENT_PKEY_PATH(),
                                          boost::asio::ssl::context::pem);
-        return std::optional<ssl::context>(std::move(ssl_context));
+        return {std::move(ssl_context)};
     }
     LOG_ERROR("Client SSL context files are missing searched paths: {}, {}, {}",
               ENTITY_CLIENT_CERT_PATH(), CLIENT_PKEY_PATH(), trustStorePath());
@@ -130,7 +130,7 @@ std::optional<ssl::context> getServerContext()
             boost::asio::ssl::verify_peer |
             boost::asio::ssl::verify_fail_if_no_peer_cert);
         ssl_context.set_verify_callback(sslVerifyCallback);
-        return std::optional(std::move(ssl_context));
+        return {std::move(ssl_context)};
     }
     return std::nullopt;
 }

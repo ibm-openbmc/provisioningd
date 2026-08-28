@@ -140,7 +140,7 @@ class FileSystemStrategy
      * @brief Initialize the filesystem strategy
      * @return awaitable<bool> always returns true
      */
-    reactor::net::awaitable<bool> initialize()
+    static reactor::net::awaitable<bool> initialize()
     {
         co_return true;
     }

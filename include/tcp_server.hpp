@@ -15,7 +15,7 @@ class TcpServer
     using Streamer = TimedStreamer<typename Accepter::stream_type>;
     TcpServer(net::any_io_executor io_context, Accepter& accepter,
               Router& router) :
-        context(io_context), acceptor(accepter), router(router)
+        context(std::move(io_context)), acceptor(accepter), router(router)
     {
         start_accept();
     }

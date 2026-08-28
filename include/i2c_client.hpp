@@ -161,7 +161,7 @@ class I2CClient
      */
     I2CClient(net::any_io_executor executor, const std::string& devicePath,
               uint16_t slaveAddress, int maxRetries = 6) :
-        executor_(executor), devicePath_(devicePath),
+        executor_(std::move(executor)), devicePath_(devicePath),
         slaveAddress_(slaveAddress), maxRetries_(maxRetries)
     {}
 
